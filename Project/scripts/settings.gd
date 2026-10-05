@@ -156,7 +156,7 @@ func apply_window() -> void:
 		mode = DisplayServer.WINDOW_MODE_FULLSCREEN
 	elif window_mode == Mode.FULLSCREEN:
 		mode = DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
-	DisplayServer.window_set_size(resolution)
+	get_window().size = resolution
 	DisplayServer.window_set_mode(mode)
 	if window_mode == Mode.WINDOWED:
 		var screen_pos := DisplayServer.screen_get_position()
