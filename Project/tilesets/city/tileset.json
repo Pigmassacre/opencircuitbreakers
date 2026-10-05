@@ -1,0 +1,2159 @@
+{
+	"grid": 16,
+	"ground": [
+		81,
+		85,
+		102
+	],
+	"id": "city",
+	"layer": 138,
+	"name": "Kenney City Kit",
+	"stack": true,
+	"tiles": [
+		{
+			"color": [
+				133,
+				139,
+				166
+			],
+			"group": 4,
+			"mesh": 0,
+			"name": "Bridge Pillar Wide"
+		},
+		{
+			"color": [
+				132,
+				139,
+				166
+			],
+			"group": 4,
+			"mesh": 1,
+			"name": "Bridge Pillar"
+		},
+		{
+			"color": [
+				152,
+				159,
+				190
+			],
+			"group": 4,
+			"mesh": 2,
+			"name": "Construction Barrier"
+		},
+		{
+			"color": [
+				251,
+				158,
+				107
+			],
+			"group": 4,
+			"mesh": 3,
+			"name": "Construction Cone"
+		},
+		{
+			"color": [
+				157,
+				164,
+				197
+			],
+			"group": 4,
+			"mesh": 4,
+			"name": "Construction Fence"
+		},
+		{
+			"color": [
+				175,
+				156,
+				160
+			],
+			"group": 4,
+			"mesh": 5,
+			"name": "Construction Light"
+		},
+		{
+			"color": [
+				62,
+				144,
+				117
+			],
+			"group": 4,
+			"mesh": 6,
+			"name": "Dumpster"
+		},
+		{
+			"color": [
+				166,
+				135,
+				137
+			],
+			"group": 4,
+			"mesh": 7,
+			"name": "Electricity Pole Single"
+		},
+		{
+			"color": [
+				142,
+				125,
+				134
+			],
+			"group": 4,
+			"mesh": 8,
+			"name": "Electricity Pole Wide"
+		},
+		{
+			"color": [
+				151,
+				129,
+				135
+			],
+			"group": 4,
+			"mesh": 9,
+			"name": "Electricity Pole"
+		},
+		{
+			"color": [
+				147,
+				154,
+				184
+			],
+			"group": 4,
+			"mesh": 10,
+			"name": "Electricity Side Single"
+		},
+		{
+			"color": [
+				131,
+				137,
+				165
+			],
+			"group": 4,
+			"mesh": 11,
+			"name": "Electricity Side Wide"
+		},
+		{
+			"color": [
+				137,
+				144,
+				172
+			],
+			"group": 4,
+			"mesh": 12,
+			"name": "Electricity Side"
+		},
+		{
+			"color": [
+				102,
+				107,
+				128
+			],
+			"group": 4,
+			"mesh": 13,
+			"name": "Electricity Wires Wide"
+		},
+		{
+			"color": [
+				102,
+				107,
+				128
+			],
+			"group": 4,
+			"mesh": 14,
+			"name": "Electricity Wires"
+		},
+		{
+			"color": [
+				182,
+				189,
+				221
+			],
+			"group": 4,
+			"mesh": 15,
+			"name": "Light Curved Cross"
+		},
+		{
+			"color": [
+				175,
+				182,
+				215
+			],
+			"group": 4,
+			"mesh": 16,
+			"name": "Light Curved Double"
+		},
+		{
+			"color": [
+				169,
+				176,
+				209
+			],
+			"group": 4,
+			"mesh": 17,
+			"name": "Light Curved"
+		},
+		{
+			"color": [
+				183,
+				190,
+				223
+			],
+			"group": 4,
+			"mesh": 18,
+			"name": "Light Square Cross"
+		},
+		{
+			"color": [
+				176,
+				184,
+				217
+			],
+			"group": 4,
+			"mesh": 19,
+			"name": "Light Square Double"
+		},
+		{
+			"color": [
+				170,
+				178,
+				211
+			],
+			"group": 4,
+			"mesh": 20,
+			"name": "Light Square"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 21,
+			"name": "Bend Barrier"
+		},
+		{
+			"color": [
+				129,
+				135,
+				162
+			],
+			"group": 1,
+			"mesh": 22,
+			"name": "Bend Sidewalk"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 23,
+			"name": "Bend Square Barrier"
+		},
+		{
+			"color": [
+				138,
+				145,
+				174
+			],
+			"group": 1,
+			"mesh": 24,
+			"name": "Bend Square"
+		},
+		{
+			"color": [
+				121,
+				127,
+				152
+			],
+			"group": 1,
+			"mesh": 25,
+			"name": "Bend"
+		},
+		{
+			"color": [
+				123,
+				128,
+				154
+			],
+			"group": 0,
+			"mesh": 26,
+			"name": "Bridge"
+		},
+		{
+			"color": [
+				123,
+				129,
+				154
+			],
+			"group": 0,
+			"mesh": 27,
+			"name": "Crossing"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 28,
+			"name": "Crossroad Barrier"
+		},
+		{
+			"color": [
+				115,
+				120,
+				144
+			],
+			"group": 1,
+			"mesh": 29,
+			"name": "Crossroad Line"
+		},
+		{
+			"color": [
+				117,
+				123,
+				147
+			],
+			"group": 1,
+			"mesh": 30,
+			"name": "Crossroad Path"
+		},
+		{
+			"color": [
+				114,
+				119,
+				143
+			],
+			"group": 1,
+			"mesh": 31,
+			"name": "Crossroad"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 32,
+			"name": "Curve Barrier"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 33,
+			"name": "Curve Intersection Barrier"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 34
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 35
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 36
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 37
+				}
+			],
+			"color": [
+				120,
+				126,
+				151
+			],
+			"group": 1,
+			"name": "Curve Intersection"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 38
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 39
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 40
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 41
+				}
+			],
+			"color": [
+				136,
+				142,
+				170
+			],
+			"group": 1,
+			"name": "Curve Pavement"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 42
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 43
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 44
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 45
+				}
+			],
+			"color": [
+				122,
+				127,
+				152
+			],
+			"group": 1,
+			"name": "Curve"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 46,
+			"name": "Driveway Double Barrier"
+		},
+		{
+			"color": [
+				119,
+				124,
+				149
+			],
+			"group": 0,
+			"mesh": 47,
+			"name": "Driveway Double"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 48,
+			"name": "Driveway Single Barrier"
+		},
+		{
+			"color": [
+				120,
+				125,
+				150
+			],
+			"group": 0,
+			"mesh": 49,
+			"name": "Driveway Single"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 50,
+			"name": "End Barrier"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 51,
+			"name": "End Round Barrier"
+		},
+		{
+			"color": [
+				124,
+				130,
+				156
+			],
+			"group": 0,
+			"mesh": 52,
+			"name": "End Round"
+		},
+		{
+			"color": [
+				125,
+				130,
+				156
+			],
+			"group": 0,
+			"mesh": 53,
+			"name": "End"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 54,
+			"name": "Intersection Barrier"
+		},
+		{
+			"color": [
+				118,
+				123,
+				148
+			],
+			"group": 1,
+			"mesh": 55,
+			"name": "Intersection Line"
+		},
+		{
+			"color": [
+				120,
+				125,
+				150
+			],
+			"group": 1,
+			"mesh": 56,
+			"name": "Intersection Path"
+		},
+		{
+			"color": [
+				118,
+				123,
+				147
+			],
+			"group": 1,
+			"mesh": 57,
+			"name": "Intersection"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 58,
+			"name": "Roundabout Barrier"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 59
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 60
+				},
+				{
+					"dx": 0,
+					"dz": 2,
+					"mesh": 61
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 62
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 63
+				},
+				{
+					"dx": -1,
+					"dz": 2,
+					"mesh": 64
+				},
+				{
+					"dx": -2,
+					"dz": 0,
+					"mesh": 65
+				},
+				{
+					"dx": -2,
+					"dz": 1,
+					"mesh": 66
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 67
+				}
+			],
+			"color": [
+				120,
+				125,
+				150
+			],
+			"group": 1,
+			"name": "Roundabout"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 68,
+			"name": "Side Barrier"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 69,
+			"name": "Side Entry Barrier"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 70
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 71
+				}
+			],
+			"color": [
+				120,
+				126,
+				151
+			],
+			"group": 0,
+			"name": "Side Entry"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 72,
+			"name": "Side Exit Barrier"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 73
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 74
+				}
+			],
+			"color": [
+				120,
+				126,
+				151
+			],
+			"group": 0,
+			"name": "Side Exit"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 75
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 76
+				}
+			],
+			"color": [
+				120,
+				125,
+				150
+			],
+			"group": 0,
+			"name": "Side"
+		},
+		{
+			"color": [
+				148,
+				155,
+				185
+			],
+			"group": 4,
+			"mesh": 77,
+			"name": "Sign Empty Hanging"
+		},
+		{
+			"color": [
+				157,
+				164,
+				197
+			],
+			"group": 4,
+			"mesh": 78,
+			"name": "Sign Empty"
+		},
+		{
+			"color": [
+				156,
+				126,
+				134
+			],
+			"group": 4,
+			"mesh": 79,
+			"name": "Sign Object Stop"
+		},
+		{
+			"color": [
+				95,
+				154,
+				143
+			],
+			"group": 4,
+			"mesh": 80,
+			"name": "Sign Object Street"
+		},
+		{
+			"color": [
+				137,
+				123,
+				115
+			],
+			"group": 4,
+			"mesh": 81,
+			"name": "Sign Object Warning"
+		},
+		{
+			"color": [
+				157,
+				146,
+				168
+			],
+			"group": 4,
+			"mesh": 82,
+			"name": "Sign Stop"
+		},
+		{
+			"color": [
+				125,
+				159,
+				169
+			],
+			"group": 4,
+			"mesh": 83,
+			"name": "Sign Street"
+		},
+		{
+			"color": [
+				149,
+				147,
+				161
+			],
+			"group": 4,
+			"mesh": 84,
+			"name": "Sign Warning"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 85,
+			"name": "Slant Barrier"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 86,
+			"name": "Slant Curve Barrier"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 87
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 88
+				}
+			],
+			"color": [
+				127,
+				133,
+				159
+			],
+			"group": 2,
+			"name": "Slant Curve"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 89
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 90
+				}
+			],
+			"color": [
+				134,
+				140,
+				168
+			],
+			"group": 2,
+			"name": "Slant Flat Curve"
+		},
+		{
+			"color": [
+				133,
+				139,
+				167
+			],
+			"group": 2,
+			"mesh": 91,
+			"name": "Slant Flat High"
+		},
+		{
+			"color": [
+				133,
+				139,
+				167
+			],
+			"group": 2,
+			"mesh": 92,
+			"name": "Slant Flat"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 93,
+			"name": "Slant High Barrier"
+		},
+		{
+			"color": [
+				129,
+				134,
+				161
+			],
+			"group": 2,
+			"mesh": 94,
+			"name": "Slant High"
+		},
+		{
+			"color": [
+				125,
+				130,
+				156
+			],
+			"group": 2,
+			"mesh": 95,
+			"name": "Slant"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 96,
+			"name": "Split Barrier"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 97
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 98
+				}
+			],
+			"color": [
+				120,
+				125,
+				150
+			],
+			"group": 1,
+			"name": "Split"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 99,
+			"name": "Square Barrier"
+		},
+		{
+			"color": [
+				128,
+				134,
+				161
+			],
+			"group": 0,
+			"mesh": 100,
+			"name": "Square"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 101,
+			"name": "Straight Barrier End"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 102,
+			"name": "Straight Barrier Half"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 3,
+			"mesh": 103,
+			"name": "Straight Barrier"
+		},
+		{
+			"color": [
+				121,
+				127,
+				152
+			],
+			"group": 0,
+			"mesh": 104,
+			"name": "Straight Half"
+		},
+		{
+			"color": [
+				121,
+				127,
+				152
+			],
+			"group": 0,
+			"mesh": 105,
+			"name": "Straight"
+		},
+		{
+			"color": [
+				132,
+				149,
+				159
+			],
+			"group": 4,
+			"mesh": 106,
+			"name": "Sign Highway Detailed"
+		},
+		{
+			"color": [
+				123,
+				149,
+				162
+			],
+			"group": 4,
+			"mesh": 107,
+			"name": "Sign Highway Wide"
+		},
+		{
+			"color": [
+				126,
+				149,
+				163
+			],
+			"group": 4,
+			"mesh": 108,
+			"name": "Sign Highway"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 0,
+			"mesh": 109,
+			"name": "Tile High"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 0,
+			"mesh": 110,
+			"name": "Tile Low"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 2,
+			"mesh": 111,
+			"name": "Tile Slant"
+		},
+		{
+			"color": [
+				160,
+				168,
+				201
+			],
+			"group": 2,
+			"mesh": 112,
+			"name": "Tile Slant High"
+		},
+		{
+			"color": [
+				145,
+				143,
+				156
+			],
+			"group": 4,
+			"mesh": 113,
+			"name": "Traffic Light Hanging"
+		},
+		{
+			"color": [
+				139,
+				120,
+				100
+			],
+			"group": 4,
+			"mesh": 114,
+			"name": "Traffic Light Object Hanging"
+		},
+		{
+			"color": [
+				141,
+				120,
+				98
+			],
+			"group": 4,
+			"mesh": 115,
+			"name": "Traffic Light Object Horizontal"
+		},
+		{
+			"color": [
+				136,
+				119,
+				102
+			],
+			"group": 4,
+			"mesh": 116,
+			"name": "Traffic Light Object Vertical"
+		},
+		{
+			"color": [
+				145,
+				141,
+				151
+			],
+			"group": 4,
+			"mesh": 117,
+			"name": "Traffic Light"
+		},
+		{
+			"color": [
+				118,
+				168,
+				153
+			],
+			"group": 5,
+			"mesh": 118,
+			"name": "House A"
+		},
+		{
+			"color": [
+				120,
+				163,
+				152
+			],
+			"group": 5,
+			"mesh": 119,
+			"name": "House B"
+		},
+		{
+			"color": [
+				127,
+				169,
+				159
+			],
+			"group": 5,
+			"mesh": 120,
+			"name": "House C"
+		},
+		{
+			"color": [
+				125,
+				163,
+				157
+			],
+			"group": 5,
+			"mesh": 121,
+			"name": "House D"
+		},
+		{
+			"color": [
+				121,
+				158,
+				153
+			],
+			"group": 5,
+			"mesh": 122,
+			"name": "House E"
+		},
+		{
+			"color": [
+				124,
+				160,
+				155
+			],
+			"group": 5,
+			"mesh": 123,
+			"name": "House F"
+		},
+		{
+			"color": [
+				116,
+				161,
+				147
+			],
+			"group": 5,
+			"mesh": 124,
+			"name": "House G"
+		},
+		{
+			"color": [
+				115,
+				162,
+				150
+			],
+			"group": 5,
+			"mesh": 125,
+			"name": "House H"
+		},
+		{
+			"color": [
+				115,
+				167,
+				150
+			],
+			"group": 5,
+			"mesh": 126,
+			"name": "House I"
+		},
+		{
+			"color": [
+				126,
+				169,
+				159
+			],
+			"group": 5,
+			"mesh": 127,
+			"name": "House J"
+		},
+		{
+			"color": [
+				131,
+				154,
+				159
+			],
+			"group": 5,
+			"mesh": 128,
+			"name": "House K"
+		},
+		{
+			"color": [
+				109,
+				126,
+				134
+			],
+			"group": 5,
+			"mesh": 129,
+			"name": "House L"
+		},
+		{
+			"color": [
+				119,
+				166,
+				152
+			],
+			"group": 5,
+			"mesh": 130,
+			"name": "House M"
+		},
+		{
+			"color": [
+				122,
+				160,
+				154
+			],
+			"group": 5,
+			"mesh": 131,
+			"name": "House N"
+		},
+		{
+			"color": [
+				127,
+				153,
+				156
+			],
+			"group": 5,
+			"mesh": 132,
+			"name": "House O"
+		},
+		{
+			"color": [
+				114,
+				120,
+				140
+			],
+			"group": 5,
+			"mesh": 133,
+			"name": "House P"
+		},
+		{
+			"color": [
+				120,
+				125,
+				145
+			],
+			"group": 5,
+			"mesh": 134,
+			"name": "House Q"
+		},
+		{
+			"color": [
+				134,
+				163,
+				162
+			],
+			"group": 5,
+			"mesh": 135,
+			"name": "House R"
+		},
+		{
+			"color": [
+				134,
+				171,
+				164
+			],
+			"group": 5,
+			"mesh": 136,
+			"name": "House S"
+		},
+		{
+			"color": [
+				121,
+				162,
+				154
+			],
+			"group": 5,
+			"mesh": 137,
+			"name": "House T"
+		},
+		{
+			"color": [
+				124,
+				156,
+				154
+			],
+			"group": 5,
+			"mesh": 138,
+			"name": "House U"
+		},
+		{
+			"color": [
+				78,
+				82,
+				97
+			],
+			"group": 5,
+			"mesh": 139,
+			"name": "Driveway Long"
+		},
+		{
+			"color": [
+				78,
+				82,
+				97
+			],
+			"group": 5,
+			"mesh": 140,
+			"name": "Driveway Short"
+		},
+		{
+			"color": [
+				199,
+				116,
+				80
+			],
+			"group": 5,
+			"mesh": 141,
+			"name": "Fence 1x2"
+		},
+		{
+			"color": [
+				199,
+				116,
+				81
+			],
+			"group": 5,
+			"mesh": 142,
+			"name": "Fence 1x3"
+		},
+		{
+			"color": [
+				199,
+				116,
+				81
+			],
+			"group": 5,
+			"mesh": 143,
+			"name": "Fence 1x4"
+		},
+		{
+			"color": [
+				199,
+				116,
+				81
+			],
+			"group": 5,
+			"mesh": 144,
+			"name": "Fence 2x2"
+		},
+		{
+			"color": [
+				200,
+				116,
+				81
+			],
+			"group": 5,
+			"mesh": 145,
+			"name": "Fence 2x3"
+		},
+		{
+			"color": [
+				200,
+				116,
+				81
+			],
+			"group": 5,
+			"mesh": 146,
+			"name": "Fence 3x2"
+		},
+		{
+			"color": [
+				200,
+				117,
+				81
+			],
+			"group": 5,
+			"mesh": 147,
+			"name": "Fence 3x3"
+		},
+		{
+			"color": [
+				202,
+				118,
+				82
+			],
+			"group": 5,
+			"mesh": 148,
+			"name": "Fence Low"
+		},
+		{
+			"color": [
+				204,
+				120,
+				84
+			],
+			"group": 5,
+			"mesh": 149,
+			"name": "Fence"
+		},
+		{
+			"color": [
+				122,
+				113,
+				127
+			],
+			"group": 5,
+			"mesh": 150,
+			"name": "Path Long"
+		},
+		{
+			"color": [
+				121,
+				113,
+				128
+			],
+			"group": 5,
+			"mesh": 151,
+			"name": "Path Short"
+		},
+		{
+			"color": [
+				106,
+				112,
+				135
+			],
+			"group": 5,
+			"mesh": 152,
+			"name": "Path Stones Long"
+		},
+		{
+			"color": [
+				106,
+				112,
+				135
+			],
+			"group": 5,
+			"mesh": 153,
+			"name": "Path Stones Messy"
+		},
+		{
+			"color": [
+				106,
+				112,
+				135
+			],
+			"group": 5,
+			"mesh": 154,
+			"name": "Path Stones Short"
+		},
+		{
+			"color": [
+				105,
+				135,
+				120
+			],
+			"group": 5,
+			"mesh": 155,
+			"name": "Planter"
+		},
+		{
+			"color": [
+				84,
+				154,
+				113
+			],
+			"group": 5,
+			"mesh": 156,
+			"name": "Tree Large"
+		},
+		{
+			"color": [
+				69,
+				157,
+				116
+			],
+			"group": 5,
+			"mesh": 157,
+			"name": "Tree Small"
+		},
+		{
+			"color": [
+				125,
+				129,
+				148
+			],
+			"group": 6,
+			"mesh": 158,
+			"name": "Building A"
+		},
+		{
+			"color": [
+				119,
+				123,
+				142
+			],
+			"group": 6,
+			"mesh": 159,
+			"name": "Building B"
+		},
+		{
+			"color": [
+				137,
+				141,
+				158
+			],
+			"group": 6,
+			"mesh": 160,
+			"name": "Building C"
+		},
+		{
+			"color": [
+				120,
+				125,
+				143
+			],
+			"group": 6,
+			"mesh": 161,
+			"name": "Building D"
+		},
+		{
+			"color": [
+				129,
+				135,
+				153
+			],
+			"group": 6,
+			"mesh": 162,
+			"name": "Building E"
+		},
+		{
+			"color": [
+				128,
+				134,
+				153
+			],
+			"group": 6,
+			"mesh": 163,
+			"name": "Building F"
+		},
+		{
+			"color": [
+				127,
+				131,
+				149
+			],
+			"group": 6,
+			"mesh": 164,
+			"name": "Building G"
+		},
+		{
+			"color": [
+				107,
+				115,
+				133
+			],
+			"group": 6,
+			"mesh": 165,
+			"name": "Building H"
+		},
+		{
+			"color": [
+				125,
+				129,
+				147
+			],
+			"group": 6,
+			"mesh": 166,
+			"name": "Building I"
+		},
+		{
+			"color": [
+				136,
+				141,
+				158
+			],
+			"group": 6,
+			"mesh": 167,
+			"name": "Building J"
+		},
+		{
+			"color": [
+				119,
+				123,
+				141
+			],
+			"group": 6,
+			"mesh": 168,
+			"name": "Building K"
+		},
+		{
+			"color": [
+				126,
+				132,
+				150
+			],
+			"group": 6,
+			"mesh": 169,
+			"name": "Building L"
+		},
+		{
+			"color": [
+				129,
+				136,
+				154
+			],
+			"group": 6,
+			"mesh": 170,
+			"name": "Building M"
+		},
+		{
+			"color": [
+				137,
+				142,
+				161
+			],
+			"group": 6,
+			"mesh": 171,
+			"name": "Building N"
+		},
+		{
+			"color": [
+				131,
+				141,
+				167
+			],
+			"group": 6,
+			"mesh": 172,
+			"name": "Skyscraper A"
+		},
+		{
+			"color": [
+				137,
+				149,
+				177
+			],
+			"group": 6,
+			"mesh": 173,
+			"name": "Skyscraper B"
+		},
+		{
+			"color": [
+				145,
+				154,
+				176
+			],
+			"group": 6,
+			"mesh": 174,
+			"name": "Skyscraper C"
+		},
+		{
+			"color": [
+				149,
+				159,
+				182
+			],
+			"group": 6,
+			"mesh": 175,
+			"name": "Skyscraper D"
+		},
+		{
+			"color": [
+				154,
+				161,
+				180
+			],
+			"group": 6,
+			"mesh": 176,
+			"name": "Skyscraper E"
+		},
+		{
+			"color": [
+				72,
+				155,
+				125
+			],
+			"group": 6,
+			"mesh": 177,
+			"name": "Detail Awning Wide"
+		},
+		{
+			"color": [
+				78,
+				148,
+				127
+			],
+			"group": 6,
+			"mesh": 178,
+			"name": "Detail Awning"
+		},
+		{
+			"color": [
+				167,
+				168,
+				183
+			],
+			"group": 6,
+			"mesh": 179,
+			"name": "Detail Overhang Wide"
+		},
+		{
+			"color": [
+				164,
+				165,
+				180
+			],
+			"group": 6,
+			"mesh": 180,
+			"name": "Detail Overhang"
+		},
+		{
+			"color": [
+				90,
+				149,
+				136
+			],
+			"group": 6,
+			"mesh": 181,
+			"name": "Detail Parasol A"
+		},
+		{
+			"color": [
+				91,
+				152,
+				136
+			],
+			"group": 6,
+			"mesh": 182,
+			"name": "Detail Parasol B"
+		},
+		{
+			"color": [
+				113,
+				115,
+				133
+			],
+			"group": 7,
+			"mesh": 183,
+			"name": "Factory A"
+		},
+		{
+			"color": [
+				129,
+				130,
+				146
+			],
+			"group": 7,
+			"mesh": 184,
+			"name": "Factory B"
+		},
+		{
+			"color": [
+				148,
+				141,
+				145
+			],
+			"group": 7,
+			"mesh": 185,
+			"name": "Factory C"
+		},
+		{
+			"color": [
+				110,
+				113,
+				131
+			],
+			"group": 7,
+			"mesh": 186,
+			"name": "Factory D"
+		},
+		{
+			"color": [
+				128,
+				130,
+				148
+			],
+			"group": 7,
+			"mesh": 187,
+			"name": "Factory E"
+		},
+		{
+			"color": [
+				117,
+				120,
+				137
+			],
+			"group": 7,
+			"mesh": 188,
+			"name": "Factory F"
+		},
+		{
+			"color": [
+				112,
+				114,
+				132
+			],
+			"group": 7,
+			"mesh": 189,
+			"name": "Factory G"
+		},
+		{
+			"color": [
+				141,
+				142,
+				160
+			],
+			"group": 7,
+			"mesh": 190,
+			"name": "Factory H"
+		},
+		{
+			"color": [
+				139,
+				141,
+				157
+			],
+			"group": 7,
+			"mesh": 191,
+			"name": "Factory I"
+		},
+		{
+			"color": [
+				144,
+				147,
+				163
+			],
+			"group": 7,
+			"mesh": 192,
+			"name": "Factory J"
+		},
+		{
+			"color": [
+				116,
+				118,
+				135
+			],
+			"group": 7,
+			"mesh": 193,
+			"name": "Factory K"
+		},
+		{
+			"color": [
+				148,
+				145,
+				155
+			],
+			"group": 7,
+			"mesh": 194,
+			"name": "Factory L"
+		},
+		{
+			"color": [
+				139,
+				138,
+				151
+			],
+			"group": 7,
+			"mesh": 195,
+			"name": "Factory M"
+		},
+		{
+			"color": [
+				134,
+				135,
+				150
+			],
+			"group": 7,
+			"mesh": 196,
+			"name": "Factory N"
+		},
+		{
+			"color": [
+				120,
+				123,
+				140
+			],
+			"group": 7,
+			"mesh": 197,
+			"name": "Factory O"
+		},
+		{
+			"color": [
+				134,
+				136,
+				150
+			],
+			"group": 7,
+			"mesh": 198,
+			"name": "Factory P"
+		},
+		{
+			"color": [
+				123,
+				126,
+				143
+			],
+			"group": 7,
+			"mesh": 199,
+			"name": "Factory Q"
+		},
+		{
+			"color": [
+				126,
+				124,
+				136
+			],
+			"group": 7,
+			"mesh": 200,
+			"name": "Factory R"
+		},
+		{
+			"color": [
+				140,
+				140,
+				156
+			],
+			"group": 7,
+			"mesh": 201,
+			"name": "Factory S"
+		},
+		{
+			"color": [
+				115,
+				119,
+				135
+			],
+			"group": 7,
+			"mesh": 202,
+			"name": "Factory T"
+		},
+		{
+			"color": [
+				220,
+				204,
+				191
+			],
+			"group": 7,
+			"mesh": 203,
+			"name": "Chimney Basic"
+		},
+		{
+			"color": [
+				171,
+				160,
+				161
+			],
+			"group": 7,
+			"mesh": 204,
+			"name": "Chimney Large"
+		},
+		{
+			"color": [
+				208,
+				185,
+				163
+			],
+			"group": 7,
+			"mesh": 205,
+			"name": "Chimney Medium"
+		},
+		{
+			"color": [
+				174,
+				175,
+				191
+			],
+			"group": 7,
+			"mesh": 206,
+			"name": "Chimney Small"
+		},
+		{
+			"color": [
+				195,
+				180,
+				175
+			],
+			"group": 7,
+			"mesh": 207,
+			"name": "Detail Tank Large"
+		},
+		{
+			"color": [
+				183,
+				148,
+				107
+			],
+			"group": 7,
+			"mesh": 208,
+			"name": "Detail Tank"
+		},
+		{
+			"color": [
+				226,
+				104,
+				83
+			],
+			"group": 7,
+			"mesh": 209,
+			"name": "Shipping Container A"
+		},
+		{
+			"color": [
+				109,
+				121,
+				191
+			],
+			"group": 7,
+			"mesh": 210,
+			"name": "Shipping Container B"
+		},
+		{
+			"color": [
+				73,
+				169,
+				130
+			],
+			"group": 7,
+			"mesh": 211,
+			"name": "Shipping Container C"
+		},
+		{
+			"color": [
+				123,
+				130,
+				159
+			],
+			"group": 7,
+			"mesh": 212,
+			"name": "Solar Panel Flat"
+		},
+		{
+			"color": [
+				119,
+				125,
+				152
+			],
+			"group": 7,
+			"mesh": 213,
+			"name": "Solar Panel Landscape Group"
+		},
+		{
+			"color": [
+				119,
+				125,
+				152
+			],
+			"group": 7,
+			"mesh": 214,
+			"name": "Solar Panel Landscape"
+		},
+		{
+			"color": [
+				119,
+				125,
+				151
+			],
+			"group": 7,
+			"mesh": 215,
+			"name": "Solar Panel Portrait Group"
+		},
+		{
+			"color": [
+				119,
+				125,
+				151
+			],
+			"group": 7,
+			"mesh": 216,
+			"name": "Solar Panel Portrait"
+		},
+		{
+			"color": [
+				142,
+				138,
+				144
+			],
+			"group": 7,
+			"mesh": 217,
+			"name": "Water Tower"
+		},
+		{
+			"color": [
+				223,
+				197,
+				168
+			],
+			"group": 7,
+			"mesh": 218,
+			"name": "Windmill Low"
+		},
+		{
+			"color": [
+				224,
+				198,
+				171
+			],
+			"group": 7,
+			"mesh": 219,
+			"name": "Windmill"
+		}
+	]
+}

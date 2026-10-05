@@ -1,0 +1,1268 @@
+{
+	"id": "city",
+	"name": "Kenney City Kit",
+	"layer": 138,
+	"ground": [
+		81,
+		85,
+		102
+	],
+	"stack": true,
+	"grid": 16,
+	"models": [
+		{
+			"file": "roads/bridge-pillar-wide.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/bridge-pillar.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/construction-barrier.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/construction-cone.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/construction-fence.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/construction-light.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/dumpster.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/electricity-pole-single.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/electricity-pole-wide.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/electricity-pole.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/electricity-side-single.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/electricity-side-wide.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/electricity-side.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/electricity-wires-wide.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/electricity-wires.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/light-curved-cross.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/light-curved-double.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/light-curved.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/light-square-cross.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/light-square-double.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/light-square.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-bend-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-bend-sidewalk.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-bend-square-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-bend-square.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-bend.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-bridge.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-crossing.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-crossroad-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-crossroad-line.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-crossroad-path.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-crossroad.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-curve-barrier.obj",
+			"cells": true,
+			"offset": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-curve-intersection-barrier.obj",
+			"cells": true,
+			"offset": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-curve-intersection.obj",
+			"cells": true,
+			"offset": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-curve-pavement.obj",
+			"cells": true,
+			"offset": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-curve.obj",
+			"cells": true,
+			"offset": [
+				0.0,
+				0.0,
+				0.0
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-driveway-double-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-driveway-double.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-driveway-single-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-driveway-single.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-end-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-end-round-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-end-round.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-end.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-intersection-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-intersection-line.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-intersection-path.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-intersection.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-roundabout-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-roundabout.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-side-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-side-entry-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-side-entry.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-side-exit-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-side-exit.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-side.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-sign-empty-hanging.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-sign-empty.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-sign-object-stop.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-sign-object-street.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-sign-object-warning.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-sign-stop.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-sign-street.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-sign-warning.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/road-slant-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-slant-curve-barrier.obj",
+			"cells": true,
+			"offset": [
+				0.0,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-slant-curve.obj",
+			"cells": true,
+			"offset": [
+				0.0,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 2
+		},
+		{
+			"file": "roads/road-slant-flat-curve.obj",
+			"cells": true,
+			"offset": [
+				0.0,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 2
+		},
+		{
+			"file": "roads/road-slant-flat-high.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 2
+		},
+		{
+			"file": "roads/road-slant-flat.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 2
+		},
+		{
+			"file": "roads/road-slant-high-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-slant-high.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 2
+		},
+		{
+			"file": "roads/road-slant.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 2
+		},
+		{
+			"file": "roads/road-split-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.0
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-split.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.0
+			],
+			"deck": true,
+			"group": 1
+		},
+		{
+			"file": "roads/road-square-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-square.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-straight-barrier-end.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-straight-barrier-half.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-straight-barrier.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 3
+		},
+		{
+			"file": "roads/road-straight-half.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/road-straight.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/sign-highway-detailed.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/sign-highway-wide.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/sign-highway.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/tile-high.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/tile-low.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 0
+		},
+		{
+			"file": "roads/tile-slant.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 2
+		},
+		{
+			"file": "roads/tile-slantHigh.obj",
+			"cells": true,
+			"offset": [
+				-0.5,
+				0.0,
+				0.5
+			],
+			"deck": true,
+			"group": 2
+		},
+		{
+			"file": "roads/traffic-light-hanging.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/traffic-light-object-hanging.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/traffic-light-object-horizontal.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/traffic-light-object-vertical.obj",
+			"group": 4
+		},
+		{
+			"file": "roads/traffic-light.obj",
+			"group": 4
+		},
+		{
+			"file": "suburban/building-type-a.obj",
+			"group": 5,
+			"name": "House A"
+		},
+		{
+			"file": "suburban/building-type-b.obj",
+			"group": 5,
+			"name": "House B"
+		},
+		{
+			"file": "suburban/building-type-c.obj",
+			"group": 5,
+			"name": "House C"
+		},
+		{
+			"file": "suburban/building-type-d.obj",
+			"group": 5,
+			"name": "House D"
+		},
+		{
+			"file": "suburban/building-type-e.obj",
+			"group": 5,
+			"name": "House E"
+		},
+		{
+			"file": "suburban/building-type-f.obj",
+			"group": 5,
+			"name": "House F"
+		},
+		{
+			"file": "suburban/building-type-g.obj",
+			"group": 5,
+			"name": "House G"
+		},
+		{
+			"file": "suburban/building-type-h.obj",
+			"group": 5,
+			"name": "House H"
+		},
+		{
+			"file": "suburban/building-type-i.obj",
+			"group": 5,
+			"name": "House I"
+		},
+		{
+			"file": "suburban/building-type-j.obj",
+			"group": 5,
+			"name": "House J"
+		},
+		{
+			"file": "suburban/building-type-k.obj",
+			"group": 5,
+			"name": "House K"
+		},
+		{
+			"file": "suburban/building-type-l.obj",
+			"group": 5,
+			"name": "House L"
+		},
+		{
+			"file": "suburban/building-type-m.obj",
+			"group": 5,
+			"name": "House M"
+		},
+		{
+			"file": "suburban/building-type-n.obj",
+			"group": 5,
+			"name": "House N"
+		},
+		{
+			"file": "suburban/building-type-o.obj",
+			"group": 5,
+			"name": "House O"
+		},
+		{
+			"file": "suburban/building-type-p.obj",
+			"group": 5,
+			"name": "House P"
+		},
+		{
+			"file": "suburban/building-type-q.obj",
+			"group": 5,
+			"name": "House Q"
+		},
+		{
+			"file": "suburban/building-type-r.obj",
+			"group": 5,
+			"name": "House R"
+		},
+		{
+			"file": "suburban/building-type-s.obj",
+			"group": 5,
+			"name": "House S"
+		},
+		{
+			"file": "suburban/building-type-t.obj",
+			"group": 5,
+			"name": "House T"
+		},
+		{
+			"file": "suburban/building-type-u.obj",
+			"group": 5,
+			"name": "House U"
+		},
+		{
+			"file": "suburban/driveway-long.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/driveway-short.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence-1x2.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence-1x3.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence-1x4.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence-2x2.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence-2x3.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence-3x2.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence-3x3.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence-low.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/fence.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/path-long.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/path-short.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/path-stones-long.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/path-stones-messy.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/path-stones-short.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/planter.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/tree-large.obj",
+			"group": 5
+		},
+		{
+			"file": "suburban/tree-small.obj",
+			"group": 5
+		},
+		{
+			"file": "commercial/building-a.obj",
+			"group": 6,
+			"name": "Building A"
+		},
+		{
+			"file": "commercial/building-b.obj",
+			"group": 6,
+			"name": "Building B"
+		},
+		{
+			"file": "commercial/building-c.obj",
+			"group": 6,
+			"name": "Building C"
+		},
+		{
+			"file": "commercial/building-d.obj",
+			"group": 6,
+			"name": "Building D"
+		},
+		{
+			"file": "commercial/building-e.obj",
+			"group": 6,
+			"name": "Building E"
+		},
+		{
+			"file": "commercial/building-f.obj",
+			"group": 6,
+			"name": "Building F"
+		},
+		{
+			"file": "commercial/building-g.obj",
+			"group": 6,
+			"name": "Building G"
+		},
+		{
+			"file": "commercial/building-h.obj",
+			"group": 6,
+			"name": "Building H"
+		},
+		{
+			"file": "commercial/building-i.obj",
+			"group": 6,
+			"name": "Building I"
+		},
+		{
+			"file": "commercial/building-j.obj",
+			"group": 6,
+			"name": "Building J"
+		},
+		{
+			"file": "commercial/building-k.obj",
+			"group": 6,
+			"name": "Building K"
+		},
+		{
+			"file": "commercial/building-l.obj",
+			"group": 6,
+			"name": "Building L"
+		},
+		{
+			"file": "commercial/building-m.obj",
+			"group": 6,
+			"name": "Building M"
+		},
+		{
+			"file": "commercial/building-n.obj",
+			"group": 6,
+			"name": "Building N"
+		},
+		{
+			"file": "commercial/building-skyscraper-a.obj",
+			"group": 6,
+			"name": "Skyscraper A"
+		},
+		{
+			"file": "commercial/building-skyscraper-b.obj",
+			"group": 6,
+			"name": "Skyscraper B"
+		},
+		{
+			"file": "commercial/building-skyscraper-c.obj",
+			"group": 6,
+			"name": "Skyscraper C"
+		},
+		{
+			"file": "commercial/building-skyscraper-d.obj",
+			"group": 6,
+			"name": "Skyscraper D"
+		},
+		{
+			"file": "commercial/building-skyscraper-e.obj",
+			"group": 6,
+			"name": "Skyscraper E"
+		},
+		{
+			"file": "commercial/detail-awning-wide.obj",
+			"group": 6
+		},
+		{
+			"file": "commercial/detail-awning.obj",
+			"group": 6
+		},
+		{
+			"file": "commercial/detail-overhang-wide.obj",
+			"group": 6
+		},
+		{
+			"file": "commercial/detail-overhang.obj",
+			"group": 6
+		},
+		{
+			"file": "commercial/detail-parasol-a.obj",
+			"group": 6
+		},
+		{
+			"file": "commercial/detail-parasol-b.obj",
+			"group": 6
+		},
+		{
+			"file": "industrial/building-a.obj",
+			"group": 7,
+			"name": "Factory A"
+		},
+		{
+			"file": "industrial/building-b.obj",
+			"group": 7,
+			"name": "Factory B"
+		},
+		{
+			"file": "industrial/building-c.obj",
+			"group": 7,
+			"name": "Factory C"
+		},
+		{
+			"file": "industrial/building-d.obj",
+			"group": 7,
+			"name": "Factory D"
+		},
+		{
+			"file": "industrial/building-e.obj",
+			"group": 7,
+			"name": "Factory E"
+		},
+		{
+			"file": "industrial/building-f.obj",
+			"group": 7,
+			"name": "Factory F"
+		},
+		{
+			"file": "industrial/building-g.obj",
+			"group": 7,
+			"name": "Factory G"
+		},
+		{
+			"file": "industrial/building-h.obj",
+			"group": 7,
+			"name": "Factory H"
+		},
+		{
+			"file": "industrial/building-i.obj",
+			"group": 7,
+			"name": "Factory I"
+		},
+		{
+			"file": "industrial/building-j.obj",
+			"group": 7,
+			"name": "Factory J"
+		},
+		{
+			"file": "industrial/building-k.obj",
+			"group": 7,
+			"name": "Factory K"
+		},
+		{
+			"file": "industrial/building-l.obj",
+			"group": 7,
+			"name": "Factory L"
+		},
+		{
+			"file": "industrial/building-m.obj",
+			"group": 7,
+			"name": "Factory M"
+		},
+		{
+			"file": "industrial/building-n.obj",
+			"group": 7,
+			"name": "Factory N"
+		},
+		{
+			"file": "industrial/building-o.obj",
+			"group": 7,
+			"name": "Factory O"
+		},
+		{
+			"file": "industrial/building-p.obj",
+			"group": 7,
+			"name": "Factory P"
+		},
+		{
+			"file": "industrial/building-q.obj",
+			"group": 7,
+			"name": "Factory Q"
+		},
+		{
+			"file": "industrial/building-r.obj",
+			"group": 7,
+			"name": "Factory R"
+		},
+		{
+			"file": "industrial/building-s.obj",
+			"group": 7,
+			"name": "Factory S"
+		},
+		{
+			"file": "industrial/building-t.obj",
+			"group": 7,
+			"name": "Factory T"
+		},
+		{
+			"file": "industrial/chimney-basic.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/chimney-large.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/chimney-medium.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/chimney-small.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/detail-tank-large.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/detail-tank.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/shipping-container-a.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/shipping-container-b.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/shipping-container-c.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/solar-panel-flat.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/solar-panel-landscape-group.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/solar-panel-landscape.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/solar-panel-portrait-group.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/solar-panel-portrait.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/water-tower.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/windmill-low.obj",
+			"group": 7
+		},
+		{
+			"file": "industrial/windmill.obj",
+			"group": 7
+		}
+	]
+}

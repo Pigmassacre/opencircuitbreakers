@@ -1,0 +1,47 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="OpenCircuitBreakers"
+config/version="1.0.0"
+run/main_scene="res://scenes/main_menu.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.png"
+config/windows_native_icon="res://icon.ico"
+
+[autoload]
+
+Data="*res://scripts/data.gd"
+Settings="*res://scripts/settings.gd"
+Sound="*res://scripts/sound.gd"
+Fx="*res://scripts/fx.gd"
+Net="*res://scripts/net.gd"
+Wipe="*res://scripts/wipe.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/track_dir/plugin.cfg")
+
+[physics]
+
+common/physics_ticks_per_second=120
+jolt_physics_3d/queries/enable_ray_cast_face_index=true
+3d/default_gravity=41.0
+common/physics_interpolation=true
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2

@@ -1,0 +1,400 @@
+{
+	"id": "racing",
+	"name": "Kenney Racing Kit",
+	"layer": 138,
+	"ground": [
+		77,
+		143,
+		110
+	],
+	"stack": true,
+	"grid": 16,
+	"models": [
+		{
+			"file": "bannerTowerGreen.obj"
+		},
+		{
+			"file": "bannerTowerRed.obj"
+		},
+		{
+			"file": "barrierRed.obj"
+		},
+		{
+			"file": "barrierWall.obj"
+		},
+		{
+			"file": "barrierWhite.obj"
+		},
+		{
+			"file": "billboard.obj"
+		},
+		{
+			"file": "billboardDouble_exclusive.obj"
+		},
+		{
+			"file": "billboardLow.obj"
+		},
+		{
+			"file": "billboardLower.obj"
+		},
+		{
+			"file": "camera_exclusive.obj"
+		},
+		{
+			"file": "fenceCurved.obj"
+		},
+		{
+			"file": "fenceStraight.obj"
+		},
+		{
+			"file": "flagCheckers.obj"
+		},
+		{
+			"file": "flagCheckersSmall.obj"
+		},
+		{
+			"file": "flagGreen.obj"
+		},
+		{
+			"file": "flagRed.obj"
+		},
+		{
+			"file": "flagTankco.obj"
+		},
+		{
+			"file": "grandStand.obj"
+		},
+		{
+			"file": "grandStandAwning.obj"
+		},
+		{
+			"file": "grandStandCovered.obj"
+		},
+		{
+			"file": "grandStandCoveredRound.obj"
+		},
+		{
+			"file": "grandStandRound.obj"
+		},
+		{
+			"file": "grass.obj"
+		},
+		{
+			"file": "lightColored.obj"
+		},
+		{
+			"file": "lightPostLarge.obj"
+		},
+		{
+			"file": "lightPostModern.obj"
+		},
+		{
+			"file": "lightPost_exclusive.obj"
+		},
+		{
+			"file": "lightRed.obj"
+		},
+		{
+			"file": "lightRedDouble.obj"
+		},
+		{
+			"file": "overhead.obj"
+		},
+		{
+			"file": "overheadLights.obj"
+		},
+		{
+			"file": "overheadRound.obj"
+		},
+		{
+			"file": "overheadRoundColored.obj"
+		},
+		{
+			"file": "pitsGarage.obj"
+		},
+		{
+			"file": "pitsGarageClosed.obj"
+		},
+		{
+			"file": "pitsGarageCorner.obj"
+		},
+		{
+			"file": "pitsOffice.obj"
+		},
+		{
+			"file": "pitsOfficeCorner.obj"
+		},
+		{
+			"file": "pitsOfficeRoof.obj"
+		},
+		{
+			"file": "pylon.obj"
+		},
+		{
+			"file": "radarEquipment.obj"
+		},
+		{
+			"file": "rail.obj"
+		},
+		{
+			"file": "railDouble.obj"
+		},
+		{
+			"file": "ramp.obj"
+		},
+		{
+			"file": "roadBump.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerBridgeLarge.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerBridgeLarger.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerBridgeSmall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLarge.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargeBorder.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargeBorderInner.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargeSand.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargeSandInner.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargeWall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargeWallInner.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLarger.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargerBorder.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargerBorderInner.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargerSand.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargerSandInner.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargerWall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerLargerWallInner.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerSmall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerSmallBorder.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerSmallSand.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerSmallSquare.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCornerSmallWall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCrossing.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCurved.obj",
+			"cells": true
+		},
+		{
+			"file": "roadCurvedSplit.obj",
+			"cells": true
+		},
+		{
+			"file": "roadEnd.obj",
+			"cells": true
+		},
+		{
+			"file": "roadPitEntry.obj",
+			"cells": true
+		},
+		{
+			"file": "roadPitGarage.obj",
+			"cells": true
+		},
+		{
+			"file": "roadPitStraight.obj",
+			"cells": true
+		},
+		{
+			"file": "roadPitStraightLong.obj",
+			"cells": true
+		},
+		{
+			"file": "roadRamp.obj",
+			"cells": true
+		},
+		{
+			"file": "roadRampLong.obj",
+			"cells": true
+		},
+		{
+			"file": "roadRampLongCurved.obj",
+			"cells": true
+		},
+		{
+			"file": "roadRampLongCurvedWall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadRampLongWall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadRampWall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadSide.obj",
+			"cells": true
+		},
+		{
+			"file": "roadSplit.obj",
+			"cells": true
+		},
+		{
+			"file": "roadSplitLarge.obj",
+			"cells": true
+		},
+		{
+			"file": "roadSplitLarger.obj",
+			"cells": true
+		},
+		{
+			"file": "roadSplitRound.obj",
+			"cells": true
+		},
+		{
+			"file": "roadSplitRoundLarge.obj",
+			"cells": true
+		},
+		{
+			"file": "roadSplitSmall.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStart.obj",
+			"cells": true,
+			"offset": [
+				0.13,
+				0.0,
+				0.0
+			],
+			"deck": true
+		},
+		{
+			"file": "roadStartPositions.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraight.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightArrow.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightBridge.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightBridgeMid.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightBridgeStart.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightLong.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightLongBump.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightLongBumpRound.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightLongMid.obj",
+			"cells": true
+		},
+		{
+			"file": "roadStraightSkew.obj",
+			"cells": true
+		},
+		{
+			"file": "tent.obj"
+		},
+		{
+			"file": "tentClosed.obj"
+		},
+		{
+			"file": "tentClosedLong.obj"
+		},
+		{
+			"file": "tentLong.obj"
+		},
+		{
+			"file": "tentRoof.obj"
+		},
+		{
+			"file": "tentRoofDouble.obj"
+		},
+		{
+			"file": "treeLarge.obj"
+		},
+		{
+			"file": "treeSmall.obj"
+		}
+	]
+}

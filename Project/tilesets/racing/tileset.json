@@ -1,0 +1,1885 @@
+{
+	"grid": 16,
+	"ground": [
+		77,
+		143,
+		110
+	],
+	"id": "racing",
+	"layer": 138,
+	"name": "Kenney Racing Kit",
+	"stack": true,
+	"tiles": [
+		{
+			"color": [
+				161,
+				196,
+				178
+			],
+			"group": 4,
+			"mesh": 0,
+			"name": "Banner Tower Green"
+		},
+		{
+			"color": [
+				243,
+				165,
+				164
+			],
+			"group": 4,
+			"mesh": 1,
+			"name": "Banner Tower Red"
+		},
+		{
+			"color": [
+				232,
+				85,
+				83
+			],
+			"group": 3,
+			"mesh": 2,
+			"name": "Barrier Red"
+		},
+		{
+			"color": [
+				236,
+				163,
+				165
+			],
+			"group": 3,
+			"mesh": 3,
+			"name": "Barrier Wall"
+		},
+		{
+			"color": [
+				241,
+				242,
+				246
+			],
+			"group": 3,
+			"mesh": 4,
+			"name": "Barrier White"
+		},
+		{
+			"color": [
+				160,
+				149,
+				135
+			],
+			"group": 4,
+			"mesh": 5,
+			"name": "Billboard"
+		},
+		{
+			"color": [
+				141,
+				127,
+				110
+			],
+			"group": 4,
+			"mesh": 6,
+			"name": "Billboard Double"
+		},
+		{
+			"color": [
+				154,
+				141,
+				126
+			],
+			"group": 4,
+			"mesh": 7,
+			"name": "Billboard Low"
+		},
+		{
+			"color": [
+				138,
+				125,
+				108
+			],
+			"group": 4,
+			"mesh": 8,
+			"name": "Billboard Lower"
+		},
+		{
+			"color": [
+				153,
+				154,
+				156
+			],
+			"group": 4,
+			"mesh": 9,
+			"name": "Camera"
+		},
+		{
+			"color": [
+				186,
+				201,
+				190
+			],
+			"group": 3,
+			"mesh": 10,
+			"name": "Fence Curved"
+		},
+		{
+			"color": [
+				174,
+				191,
+				176
+			],
+			"group": 3,
+			"mesh": 11,
+			"name": "Fence Straight"
+		},
+		{
+			"color": [
+				180,
+				180,
+				181
+			],
+			"group": 4,
+			"mesh": 12,
+			"name": "Flag Checkers"
+		},
+		{
+			"color": [
+				189,
+				189,
+				190
+			],
+			"group": 4,
+			"mesh": 13,
+			"name": "Flag Checkers Small"
+		},
+		{
+			"color": [
+				137,
+				179,
+				159
+			],
+			"group": 4,
+			"mesh": 14,
+			"name": "Flag Green"
+		},
+		{
+			"color": [
+				236,
+				142,
+				142
+			],
+			"group": 4,
+			"mesh": 15,
+			"name": "Flag Red"
+		},
+		{
+			"color": [
+				112,
+				112,
+				113
+			],
+			"group": 4,
+			"mesh": 16,
+			"name": "Flag Tankco"
+		},
+		{
+			"color": [
+				234,
+				209,
+				212
+			],
+			"group": 4,
+			"mesh": 17,
+			"name": "Grand Stand"
+		},
+		{
+			"color": [
+				214,
+				172,
+				173
+			],
+			"group": 4,
+			"mesh": 18,
+			"name": "Grand Stand Awning"
+		},
+		{
+			"color": [
+				221,
+				204,
+				207
+			],
+			"group": 4,
+			"mesh": 19,
+			"name": "Grand Stand Covered"
+		},
+		{
+			"color": [
+				220,
+				203,
+				206
+			],
+			"group": 4,
+			"mesh": 20,
+			"name": "Grand Stand Covered Round"
+		},
+		{
+			"color": [
+				234,
+				210,
+				213
+			],
+			"group": 4,
+			"mesh": 21,
+			"name": "Grand Stand Round"
+		},
+		{
+			"color": [
+				77,
+				143,
+				110
+			],
+			"group": 0,
+			"mesh": 22,
+			"name": "Grass"
+		},
+		{
+			"color": [
+				151,
+				150,
+				150
+			],
+			"group": 4,
+			"mesh": 23,
+			"name": "Light Colored"
+		},
+		{
+			"color": [
+				246,
+				245,
+				244
+			],
+			"group": 4,
+			"mesh": 24,
+			"name": "Light Post Large"
+		},
+		{
+			"color": [
+				250,
+				250,
+				252
+			],
+			"group": 4,
+			"mesh": 25,
+			"name": "Light Post Modern"
+		},
+		{
+			"color": [
+				247,
+				246,
+				246
+			],
+			"group": 4,
+			"mesh": 26,
+			"name": "Light Post"
+		},
+		{
+			"color": [
+				136,
+				133,
+				133
+			],
+			"group": 4,
+			"mesh": 27,
+			"name": "Light Red"
+		},
+		{
+			"color": [
+				114,
+				111,
+				111
+			],
+			"group": 4,
+			"mesh": 28,
+			"name": "Light Red Double"
+		},
+		{
+			"color": [
+				241,
+				242,
+				246
+			],
+			"group": 4,
+			"mesh": 29,
+			"name": "Overhead"
+		},
+		{
+			"color": [
+				223,
+				223,
+				226
+			],
+			"group": 4,
+			"mesh": 30,
+			"name": "Overhead Lights"
+		},
+		{
+			"color": [
+				80,
+				80,
+				80
+			],
+			"group": 4,
+			"mesh": 31,
+			"name": "Overhead Round"
+		},
+		{
+			"color": [
+				236,
+				158,
+				159
+			],
+			"group": 4,
+			"mesh": 32,
+			"name": "Overhead Round Colored"
+		},
+		{
+			"color": [
+				238,
+				238,
+				242
+			],
+			"group": 4,
+			"mesh": 33,
+			"name": "Pits Garage"
+		},
+		{
+			"color": [
+				237,
+				232,
+				235
+			],
+			"group": 4,
+			"mesh": 34,
+			"name": "Pits Garage Closed"
+		},
+		{
+			"color": [
+				237,
+				237,
+				240
+			],
+			"group": 1,
+			"mesh": 35,
+			"name": "Pits Garage Corner"
+		},
+		{
+			"color": [
+				235,
+				214,
+				217
+			],
+			"group": 4,
+			"mesh": 36,
+			"name": "Pits Office"
+		},
+		{
+			"color": [
+				221,
+				210,
+				216
+			],
+			"group": 1,
+			"mesh": 37,
+			"name": "Pits Office Corner"
+		},
+		{
+			"color": [
+				234,
+				181,
+				182
+			],
+			"group": 4,
+			"mesh": 38,
+			"name": "Pits Office Roof"
+		},
+		{
+			"color": [
+				245,
+				185,
+				66
+			],
+			"group": 4,
+			"mesh": 39,
+			"name": "Pylon"
+		},
+		{
+			"color": [
+				240,
+				241,
+				244
+			],
+			"group": 4,
+			"mesh": 40,
+			"name": "Radar Equipment"
+		},
+		{
+			"color": [
+				241,
+				242,
+				246
+			],
+			"group": 3,
+			"mesh": 41,
+			"name": "Rail"
+		},
+		{
+			"color": [
+				241,
+				242,
+				246
+			],
+			"group": 3,
+			"mesh": 42,
+			"name": "Rail Double"
+		},
+		{
+			"color": [
+				216,
+				178,
+				128
+			],
+			"group": 2,
+			"mesh": 43,
+			"name": "Ramp"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 44
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 45
+				}
+			],
+			"color": [
+				102,
+				115,
+				109
+			],
+			"group": 2,
+			"name": "Bump"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 46
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 47
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 48
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 49
+				}
+			],
+			"color": [
+				199,
+				191,
+				179
+			],
+			"group": 1,
+			"name": "Corner Bridge Large"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 50
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 51
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 52
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 53
+				},
+				{
+					"dx": -1,
+					"dz": 2,
+					"mesh": 54
+				},
+				{
+					"dx": -2,
+					"dz": 1,
+					"mesh": 55
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 56
+				}
+			],
+			"color": [
+				198,
+				191,
+				179
+			],
+			"group": 1,
+			"name": "Corner Bridge Larger"
+		},
+		{
+			"color": [
+				204,
+				195,
+				183
+			],
+			"group": 1,
+			"mesh": 57,
+			"name": "Corner Bridge Small"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 58
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 59
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 60
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 61
+				}
+			],
+			"color": [
+				103,
+				113,
+				109
+			],
+			"group": 1,
+			"name": "Corner Large"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 62
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 63
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 64
+				}
+			],
+			"color": [
+				243,
+				170,
+				169
+			],
+			"group": 3,
+			"name": "Corner Large Border"
+		},
+		{
+			"color": [
+				243,
+				170,
+				169
+			],
+			"group": 3,
+			"mesh": 65,
+			"name": "Corner Large Border Inner"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 66
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 67
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 68
+				}
+			],
+			"color": [
+				200,
+				183,
+				150
+			],
+			"group": 3,
+			"name": "Corner Large Sand"
+		},
+		{
+			"color": [
+				200,
+				183,
+				150
+			],
+			"group": 3,
+			"mesh": 69,
+			"name": "Corner Large Sand Inner"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 70
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 71
+				}
+			],
+			"color": [
+				244,
+				170,
+				169
+			],
+			"group": 3,
+			"name": "Corner Large Wall"
+		},
+		{
+			"color": [
+				243,
+				170,
+				169
+			],
+			"group": 3,
+			"mesh": 72,
+			"name": "Corner Large Wall Inner"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 73
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 74
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 75
+				},
+				{
+					"dx": -1,
+					"dz": 2,
+					"mesh": 76
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 77
+				}
+			],
+			"color": [
+				106,
+				116,
+				111
+			],
+			"group": 1,
+			"name": "Corner Larger"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 78
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 79
+				},
+				{
+					"dx": -1,
+					"dz": 2,
+					"mesh": 80
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 81
+				},
+				{
+					"dx": -3,
+					"dz": 3,
+					"mesh": 82
+				}
+			],
+			"color": [
+				244,
+				170,
+				169
+			],
+			"group": 3,
+			"name": "Corner Larger Border"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 83
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 84
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 85
+				}
+			],
+			"color": [
+				243,
+				170,
+				169
+			],
+			"group": 3,
+			"name": "Corner Larger Border Inner"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 86
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 87
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 88
+				},
+				{
+					"dx": -1,
+					"dz": 2,
+					"mesh": 89
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 90
+				},
+				{
+					"dx": -2,
+					"dz": 3,
+					"mesh": 91
+				},
+				{
+					"dx": -3,
+					"dz": 3,
+					"mesh": 92
+				}
+			],
+			"color": [
+				200,
+				183,
+				150
+			],
+			"group": 3,
+			"name": "Corner Larger Sand"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 93
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 94
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 95
+				}
+			],
+			"color": [
+				200,
+				183,
+				150
+			],
+			"group": 3,
+			"name": "Corner Larger Sand Inner"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 96
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 97
+				},
+				{
+					"dx": -1,
+					"dz": 2,
+					"mesh": 98
+				},
+				{
+					"dx": -2,
+					"dz": 3,
+					"mesh": 99
+				},
+				{
+					"dx": -3,
+					"dz": 3,
+					"mesh": 100
+				}
+			],
+			"color": [
+				244,
+				170,
+				169
+			],
+			"group": 3,
+			"name": "Corner Larger Wall"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 101
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 102
+				}
+			],
+			"color": [
+				244,
+				170,
+				169
+			],
+			"group": 3,
+			"name": "Corner Larger Wall Inner"
+		},
+		{
+			"color": [
+				103,
+				113,
+				109
+			],
+			"group": 1,
+			"mesh": 103,
+			"name": "Corner Small"
+		},
+		{
+			"color": [
+				244,
+				170,
+				169
+			],
+			"group": 3,
+			"mesh": 104,
+			"name": "Corner Small Border"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 105
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 106
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 107
+				}
+			],
+			"color": [
+				200,
+				183,
+				150
+			],
+			"group": 3,
+			"name": "Corner Small Sand"
+		},
+		{
+			"color": [
+				105,
+				115,
+				110
+			],
+			"group": 1,
+			"mesh": 108,
+			"name": "Corner Small Square"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 109
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 110
+				}
+			],
+			"color": [
+				243,
+				170,
+				169
+			],
+			"group": 3,
+			"name": "Corner Small Wall"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 111
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 112
+				},
+				{
+					"dx": 0,
+					"dz": 2,
+					"mesh": 113
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 114
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 115
+				},
+				{
+					"dx": -1,
+					"dz": 2,
+					"mesh": 116
+				}
+			],
+			"color": [
+				97,
+				104,
+				101
+			],
+			"group": 1,
+			"name": "Crossing"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 117
+				},
+				{
+					"dx": -1,
+					"dz": -1,
+					"mesh": 118
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 119
+				}
+			],
+			"color": [
+				103,
+				114,
+				109
+			],
+			"group": 1,
+			"name": "Curved"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 120
+				},
+				{
+					"dx": -1,
+					"dz": -1,
+					"mesh": 121
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 122
+				},
+				{
+					"dx": -2,
+					"dz": 0,
+					"mesh": 123
+				}
+			],
+			"color": [
+				100,
+				108,
+				105
+			],
+			"group": 1,
+			"name": "Curved Split"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 124
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 125
+				}
+			],
+			"color": [
+				108,
+				121,
+				115
+			],
+			"group": 0,
+			"name": "End"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 126
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 127
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 128
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 129
+				}
+			],
+			"color": [
+				97,
+				105,
+				102
+			],
+			"group": 0,
+			"name": "Pit Entry"
+		},
+		{
+			"color": [
+				94,
+				100,
+				98
+			],
+			"group": 0,
+			"mesh": 130,
+			"name": "Pit Garage"
+		},
+		{
+			"color": [
+				116,
+				121,
+				120
+			],
+			"group": 0,
+			"mesh": 131,
+			"name": "Pit Straight"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 132
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 133
+				}
+			],
+			"color": [
+				116,
+				121,
+				120
+			],
+			"group": 0,
+			"name": "Pit Straight Long"
+		},
+		{
+			"color": [
+				103,
+				113,
+				109
+			],
+			"group": 2,
+			"mesh": 134,
+			"name": "Ramp"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 135
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 136
+				}
+			],
+			"color": [
+				103,
+				113,
+				109
+			],
+			"group": 2,
+			"name": "Ramp Long"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 137
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 138
+				}
+			],
+			"color": [
+				103,
+				113,
+				109
+			],
+			"group": 2,
+			"name": "Ramp Long Curved"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 139
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 140
+				},
+				{
+					"dx": 0,
+					"dz": 2,
+					"mesh": 141
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 142
+				}
+			],
+			"color": [
+				181,
+				175,
+				165
+			],
+			"group": 2,
+			"name": "Ramp Long Curved Wall"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 143
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 144
+				},
+				{
+					"dx": 0,
+					"dz": 2,
+					"mesh": 145
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 146
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 147
+				}
+			],
+			"color": [
+				181,
+				175,
+				165
+			],
+			"group": 2,
+			"name": "Ramp Long Wall"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 148
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 149
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 150
+				}
+			],
+			"color": [
+				170,
+				165,
+				157
+			],
+			"group": 2,
+			"name": "Ramp Wall"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 151
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 152
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 153
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 154
+				}
+			],
+			"color": [
+				92,
+				98,
+				95
+			],
+			"group": 0,
+			"name": "Side"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 155
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 156
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 157
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 158
+				},
+				{
+					"dx": -2,
+					"dz": 0,
+					"mesh": 159
+				},
+				{
+					"dx": -2,
+					"dz": 1,
+					"mesh": 160
+				}
+			],
+			"color": [
+				101,
+				110,
+				107
+			],
+			"group": 1,
+			"name": "Split"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 161
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 162
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 163
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 164
+				}
+			],
+			"color": [
+				99,
+				107,
+				104
+			],
+			"group": 1,
+			"name": "Split Large"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 165
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 166
+				},
+				{
+					"dx": 0,
+					"dz": 2,
+					"mesh": 167
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 168
+				},
+				{
+					"dx": -1,
+					"dz": 2,
+					"mesh": 169
+				},
+				{
+					"dx": -2,
+					"dz": 2,
+					"mesh": 170
+				}
+			],
+			"color": [
+				102,
+				111,
+				107
+			],
+			"group": 1,
+			"name": "Split Larger"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 171
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 172
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 173
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 174
+				},
+				{
+					"dx": -2,
+					"dz": 0,
+					"mesh": 175
+				},
+				{
+					"dx": -2,
+					"dz": 1,
+					"mesh": 176
+				}
+			],
+			"color": [
+				100,
+				109,
+				106
+			],
+			"group": 1,
+			"name": "Split Round"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 177
+				},
+				{
+					"dx": -1,
+					"dz": -1,
+					"mesh": 178
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 179
+				},
+				{
+					"dx": -2,
+					"dz": -2,
+					"mesh": 180
+				},
+				{
+					"dx": -2,
+					"dz": -1,
+					"mesh": 181
+				},
+				{
+					"dx": -3,
+					"dz": -1,
+					"mesh": 182
+				},
+				{
+					"dx": -3,
+					"dz": 0,
+					"mesh": 183
+				},
+				{
+					"dx": -4,
+					"dz": 0,
+					"mesh": 184
+				}
+			],
+			"color": [
+				104,
+				113,
+				108
+			],
+			"group": 1,
+			"name": "Split Round Large"
+		},
+		{
+			"color": [
+				93,
+				99,
+				97
+			],
+			"group": 1,
+			"mesh": 185,
+			"name": "Split Small"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 186
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 187
+				}
+			],
+			"color": [
+				154,
+				161,
+				160
+			],
+			"group": 0,
+			"name": "Start"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 188
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 189
+				}
+			],
+			"color": [
+				112,
+				123,
+				119
+			],
+			"group": 0,
+			"name": "Start Positions"
+		},
+		{
+			"color": [
+				103,
+				113,
+				109
+			],
+			"group": 0,
+			"mesh": 190,
+			"name": "Straight"
+		},
+		{
+			"color": [
+				112,
+				122,
+				118
+			],
+			"group": 0,
+			"mesh": 191,
+			"name": "Straight Arrow"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 192
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 193
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 194
+				}
+			],
+			"color": [
+				223,
+				216,
+				205
+			],
+			"group": 0,
+			"name": "Straight Bridge"
+		},
+		{
+			"color": [
+				202,
+				194,
+				182
+			],
+			"group": 0,
+			"mesh": 195,
+			"name": "Straight Bridge Mid"
+		},
+		{
+			"color": [
+				215,
+				206,
+				191
+			],
+			"group": 0,
+			"mesh": 196,
+			"name": "Straight Bridge Start"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 197
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 198
+				}
+			],
+			"color": [
+				103,
+				113,
+				109
+			],
+			"group": 0,
+			"name": "Straight Long"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 199
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 200
+				}
+			],
+			"color": [
+				99,
+				110,
+				105
+			],
+			"group": 2,
+			"name": "Straight Long Bump"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 201
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 202
+				}
+			],
+			"color": [
+				103,
+				113,
+				109
+			],
+			"group": 2,
+			"name": "Straight Long Bump Round"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 203
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 204
+				}
+			],
+			"color": [
+				116,
+				127,
+				123
+			],
+			"group": 0,
+			"name": "Straight Long Mid"
+		},
+		{
+			"cells": [
+				{
+					"dx": 0,
+					"dz": 0,
+					"mesh": 205
+				},
+				{
+					"dx": 0,
+					"dz": 1,
+					"mesh": 206
+				},
+				{
+					"dx": -1,
+					"dz": 0,
+					"mesh": 207
+				},
+				{
+					"dx": -1,
+					"dz": 1,
+					"mesh": 208
+				}
+			],
+			"color": [
+				104,
+				114,
+				110
+			],
+			"group": 1,
+			"name": "Straight Skew"
+		},
+		{
+			"color": [
+				232,
+				91,
+				89
+			],
+			"group": 4,
+			"mesh": 209,
+			"name": "Tent"
+		},
+		{
+			"color": [
+				81,
+				145,
+				113
+			],
+			"group": 4,
+			"mesh": 210,
+			"name": "Tent Closed"
+		},
+		{
+			"color": [
+				79,
+				144,
+				112
+			],
+			"group": 4,
+			"mesh": 211,
+			"name": "Tent Closed Long"
+		},
+		{
+			"color": [
+				232,
+				88,
+				86
+			],
+			"group": 4,
+			"mesh": 212,
+			"name": "Tent Long"
+		},
+		{
+			"color": [
+				95,
+				154,
+				125
+			],
+			"group": 4,
+			"mesh": 213,
+			"name": "Tent Roof"
+		},
+		{
+			"color": [
+				94,
+				153,
+				124
+			],
+			"group": 4,
+			"mesh": 214,
+			"name": "Tent Roof Double"
+		},
+		{
+			"color": [
+				84,
+				144,
+				110
+			],
+			"group": 4,
+			"mesh": 215,
+			"name": "Tree Large"
+		},
+		{
+			"color": [
+				84,
+				144,
+				110
+			],
+			"group": 4,
+			"mesh": 216,
+			"name": "Tree Small"
+		}
+	]
+}
