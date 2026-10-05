@@ -150,11 +150,19 @@ var game_tick := 0
 
 
 func _ready() -> void:
+	process_physics_priority = 10
 	if not Data.present():
 		set_process(false)
 		set_physics_process(false)
 		return
-	process_physics_priority = 10
+	boot()
+
+
+func boot() -> void:
+	if not script_meshes.is_empty():
+		return
+	set_process(true)
+	set_physics_process(true)
 	var shader := Shader.new()
 	shader.code = SHADER
 	var sub_shader := Shader.new()

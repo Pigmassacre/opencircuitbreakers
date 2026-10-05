@@ -788,6 +788,7 @@ func poll_setup() -> void:
 			button.disabled = false
 		return
 	Sound.boot()
+	Fx.boot()
 	if setup_return != null:
 		setup_status.text = "Waiting for data..."
 		setup_bar.value = 0.0
