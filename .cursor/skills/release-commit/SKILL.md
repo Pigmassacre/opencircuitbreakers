@@ -36,10 +36,16 @@ All three must agree, or `Tools/release.sh` refuses to package:
    ```bash
    git tag -a v<version> -m "Release <version>"
    ```
-8. **Push** only when the user asks, and push the tag with the branch:
+8. **Push** only when the user asks. The user may have amended the release commit since it was tagged, so first check that the tag still points at it, and re-tag if it does not:
+   ```bash
+   git rev-parse "v<version>^{commit}" HEAD
+   git tag -f -a v<version> -m "Release <version>" HEAD
+   ```
+   Then push the tag with the branch:
    ```bash
    git push origin HEAD v<version>
    ```
+   If a stale tag is already on the remote, move it with `git push -f origin v<version>`, but only while no GitHub release uses it.
    Never run `Tools/release.sh publish` unless the user asks, because it uploads a public GitHub release. It refuses to run until `v<version>` is on the remote, and it uses this version's `CHANGELOG.md` section as the release notes.
 
 ## Changelog format
