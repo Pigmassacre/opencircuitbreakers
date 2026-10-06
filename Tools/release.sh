@@ -1,28 +1,22 @@
 #!/bin/bash
-# Package Linux and Windows builds and, when given a tag, publish them.
+# Package Linux and Windows builds and, when asked, publish them.
 # Usage: Tools/release.sh
-#        Tools/release.sh v0.1.0
+#        Tools/release.sh publish
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
-if [[ $# -gt 0 ]]; then
-	if [[ "$1" != v* ]]; then
-		echo "tag $1 must start with v" >&2
-		exit 1
-	fi
-	version="${1#v}"
-	project_version="$(sed -n 's/^config\/version="\(.*\)"$/\1/p' "$root/Project/project.godot")"
-	if [[ "$project_version" != "$version" ]]; then
-		echo "tag $1 does not match project.godot version $project_version" >&2
-		exit 1
-	fi
-	for key in file_version product_version; do
-		preset_version="$(sed -n "s/^application\/$key=\"\(.*\)\"$/\1/p" "$root/Project/export_presets.cfg")"
-		if [[ "$preset_version" != "$version.0" ]]; then
-			echo "tag $1 does not match export_presets.cfg $key $preset_version" >&2
-			exit 1
-		fi
-	done
+if [[ $# -gt 1 ]] || [[ $# -eq 1 && "$1" != publish ]]; then
+	echo "usage: Tools/release.sh [publish]" >&2
+	exit 1
 fi
+version="$(sed -n 's/^config\/version="\(.*\)"$/\1/p' "$root/Project/project.godot")"
+for key in file_version product_version; do
+	preset_version="$(sed -n "s/^application\/$key=\"\(.*\)\"$/\1/p" "$root/Project/export_presets.cfg")"
+	if [[ "$preset_version" != "$version.0" ]]; then
+		echo "export_presets.cfg $key $preset_version does not match project.godot version $version" >&2
+		exit 1
+	fi
+done
+tag="v$version"
 "$root/Tools/package.sh"
 linux_zip="$root/Builds/OpenCircuitBreakers-linux-x86_64.zip"
 windows_zip="$root/Builds/OpenCircuitBreakers-windows-x86_64.zip"
@@ -40,7 +34,6 @@ if [[ $# -eq 0 ]]; then
 	echo "wrote $windows_zip"
 	exit 0
 fi
-tag="$1"
 gh release create "$tag" "$linux_zip" "$windows_zip" \
 	--title "$tag" \
 	--generate-notes \

@@ -45,7 +45,7 @@ Godot/Godot_v4.7.2-stable_linux.x86_64 --headless --path Project -s res://script
 
 ## Building
 
-`Tools/release.sh` packages Linux and Windows builds into `Builds/`. Pass a tag (`Tools/release.sh v0.1.0`) to publish them as a GitHub release.
+`Tools/release.sh` packages Linux and Windows builds into `Builds/`. `Tools/release.sh publish` uploads them as a GitHub release tagged from the version in `project.godot`.
 
 ## License
 
