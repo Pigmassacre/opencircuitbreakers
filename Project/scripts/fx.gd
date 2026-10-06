@@ -145,14 +145,15 @@ var ripple_life := PackedInt32Array()
 var ripple_mesh: MultiMesh
 var ripple_instance: MultiMeshInstance3D
 var world_live := false
-var world_scene: Node
+# With physics interpolation on, MultiMesh.get_instance_transform returns the
+# transform from the last interpolation reset, so the drawn basis is kept here.
+var bases := {}
 var game_tick := 0
 
 
 func _ready() -> void:
 	process_physics_priority = 10
 	if not Data.present():
-		set_process(false)
 		set_physics_process(false)
 		return
 	boot()
@@ -161,7 +162,6 @@ func _ready() -> void:
 func boot() -> void:
 	if not script_meshes.is_empty():
 		return
-	set_process(true)
 	set_physics_process(true)
 	var shader := Shader.new()
 	shader.code = SHADER
@@ -244,16 +244,13 @@ func add_multi(quad: QuadMesh, count: int) -> Array:
 	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(instance)
 	var hidden := Transform3D(Basis.IDENTITY.scaled(Vector3.ZERO), Vector3.ZERO)
+	var shown: Array[Basis] = []
+	shown.resize(count)
+	shown.fill(hidden.basis)
+	bases[multi] = shown
 	for i in count:
 		multi.set_instance_transform(i, hidden)
 	return [multi, instance]
-
-
-func _process(_delta: float) -> void:
-	var scene := get_tree().current_scene
-	if world_live and scene != world_scene:
-		clear_world()
-	world_scene = scene
 
 
 # Script particles step once per game frame. Every physics tick after the cars
@@ -285,11 +282,10 @@ func rider(type: int) -> bool:
 
 
 func place(multi: MultiMesh, slot: int, at: Vector3) -> void:
-	var xform := multi.get_instance_transform(slot)
-	if xform.basis.x == Vector3.ZERO:
+	var basis: Basis = bases[multi][slot]
+	if basis.x == Vector3.ZERO:
 		return
-	xform.origin = at
-	multi.set_instance_transform(slot, xform)
+	multi.set_instance_transform(slot, Transform3D(basis, at))
 
 
 func car_frame(car: Car) -> void:
@@ -891,6 +887,7 @@ func world_frame() -> void:
 				Vector3(0.0, 0.0, 2.0 * float(wake_z) * units),
 				Vector3(2.0 * float(wake_x) * units, -16.0 * units, 0.0),
 				Vector3(0.0, 1.0, 0.0))
+			bases[script_meshes[kind]][i] = basis
 			script_meshes[kind].set_instance_transform(i, Transform3D(basis, at))
 			if fresh:
 				script_meshes[kind].reset_instance_physics_interpolation(i)
@@ -1092,8 +1089,10 @@ func paint(multi: MultiMesh, slot: int, kind: int, at: Vector3, scale: Vector3, 
 	frame = mini(frame, frames - 1)
 	var col := frame % int(cells.x)
 	var row := int(float(frame) / cells.x)
-	var appear := multi.get_instance_transform(slot).basis.x == Vector3.ZERO
-	multi.set_instance_transform(slot, Transform3D(Basis.IDENTITY.scaled(scale), at))
+	var shown: Array[Basis] = bases[multi]
+	var appear := shown[slot].x == Vector3.ZERO
+	shown[slot] = Basis.IDENTITY.scaled(scale)
+	multi.set_instance_transform(slot, Transform3D(shown[slot], at))
 	if appear:
 		multi.reset_instance_physics_interpolation(slot)
 	multi.set_instance_color(slot, color)
@@ -1102,6 +1101,7 @@ func paint(multi: MultiMesh, slot: int, kind: int, at: Vector3, scale: Vector3, 
 
 
 func hide_slot(multi: MultiMesh, slot: int) -> void:
+	bases[multi][slot] = Basis.IDENTITY.scaled(Vector3.ZERO)
 	multi.set_instance_transform(slot, Transform3D(Basis.IDENTITY.scaled(Vector3.ZERO), Vector3.ZERO))
 	multi.reset_instance_physics_interpolation(slot)
 

@@ -244,6 +244,12 @@ func _physics_process(_delta: float) -> void:
 	Fx.world_frame()
 
 
+func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		return
+	Fx.clear_world()
+
+
 func step_textures() -> void:
 	if not animate_textures:
 		return

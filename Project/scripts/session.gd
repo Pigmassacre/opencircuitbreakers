@@ -901,7 +901,6 @@ func build_track() -> void:
 		camera = battle_camera
 		battle = Battle.new()
 		add_child(battle)
-		battle.start(track, race, racers, battle_camera)
 		battle_camera.current = true
 	else:
 		add_camera()
@@ -914,6 +913,7 @@ func build_track() -> void:
 	if battle:
 		items.battle = true
 		items.setting = Battle.pickups
+		battle.start(track, race, racers, camera as BattleCamera)
 
 
 func load_ghost() -> void:

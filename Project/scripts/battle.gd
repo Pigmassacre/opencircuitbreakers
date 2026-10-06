@@ -436,7 +436,7 @@ func place(i: int, node: int) -> void:
 	var at := grid_slot(i, node)
 	cars[i].teleport(at[1], at[0])
 	race.nodes[i] = at[0]
-	Fx.appear(cars[i])
+	cars[i].begin_appear()
 
 
 func respawn(car: Car) -> void:

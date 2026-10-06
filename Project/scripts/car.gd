@@ -385,6 +385,8 @@ func _physics_process(_delta: float) -> void:
 				blow_bubbles()
 		return
 	if frozen:
+		if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0:
+			step_appear()
 		return
 	if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0 and items.race.cars[0] == self:
 		items.race.begin_game_frame()
