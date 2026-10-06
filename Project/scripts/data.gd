@@ -56,6 +56,11 @@ func present() -> bool:
 	return folder != ""
 
 
+# A data folder left by an older version of the game, missing files this one needs.
+func outdated() -> bool:
+	return folder == "" and DirAccess.dir_exists_absolute(content_folder())
+
+
 func path(res_path: String) -> String:
 	if folder == "" or folder == "res://":
 		return res_path

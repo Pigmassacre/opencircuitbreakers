@@ -567,7 +567,7 @@ func open_setup(return_to: VBoxContainer) -> void:
 		build_setup()
 	setup_back.text = "Quit to Desktop" if return_to == null else "Back"
 	if setup_job == null:
-		setup_status.text = "Waiting for data..."
+		setup_status.text = idle_setup_status()
 		setup_bar.value = 0.0
 		setup_go.disabled = false
 		setup_disc.editable = true
@@ -575,6 +575,12 @@ func open_setup(return_to: VBoxContainer) -> void:
 		for button in setup_file_buttons:
 			button.disabled = false
 	show_page(setup_page)
+
+
+func idle_setup_status() -> String:
+	if Data.outdated():
+		return "Your data folder is from an older version of the game and is missing content this version needs. Run the export again to update it."
+	return "Waiting for data..."
 
 
 func build_setup() -> void:
