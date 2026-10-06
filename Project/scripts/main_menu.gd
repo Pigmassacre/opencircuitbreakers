@@ -2851,7 +2851,7 @@ func build_options(column: VBoxContainer) -> void:
 	stack.alignment = BoxContainer.ALIGNMENT_CENTER
 	stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	stack.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	stack.custom_minimum_size = Vector2(640, 0)
+	stack.custom_minimum_size = Vector2(UiTheme.OPTIONS_W, 0)
 	stack.add_theme_constant_override("separation", 22)
 	column.add_child(stack)
 	options_focus = UiTheme.fill_options(stack)

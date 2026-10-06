@@ -7,6 +7,8 @@ const ACCENT := Color(0.86, 0.15, 0.46)
 const CREAM := Color(0.99, 0.88, 0.58)
 const CORAL := Color(0.93, 0.4, 0.26)
 const LIP := Color(0.4, 0.05, 0.18)
+const OPTIONS_W := 700.0
+const OPTION_LABEL_W := 220.0
 
 
 static func font() -> Font:
@@ -108,7 +110,7 @@ static func theme() -> Theme:
 	theme.set_stylebox("grabber_area", "HSlider", filled)
 	theme.set_stylebox("grabber_area_highlight", "HSlider", filled)
 	theme.set_icon("grabber", "HSlider", grabber(CREAM))
-	theme.set_icon("grabber_highlight", "HSlider", grabber(Color.WHITE))
+	theme.set_icon("grabber_highlight", "HSlider", grabber(Color.WHITE, Vector2i(14, 34), 2))
 	theme.set_type_variation("SpinBoxInnerLineEdit", "LineEdit")
 	theme.set_stylebox("normal", "SpinBoxInnerLineEdit", field)
 	theme.set_stylebox("focus", "SpinBoxInnerLineEdit", field)
@@ -234,9 +236,15 @@ static func add_heading(column: VBoxContainer, title: String, size: int) -> void
 
 
 static func fill_options(column: VBoxContainer) -> HSlider:
+	section_header(column, "Audio")
 	var focus := volume_row(column, "Master", Settings.master, Settings.set_master)
 	volume_row(column, "Music", Settings.music, Settings.set_music)
 	volume_row(column, "SFX", Settings.sfx, Settings.set_sfx)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 8)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(gap)
+	section_header(column, "Graphics")
 	var mode := choice_row(column, "Window", ["Windowed", "Borderless", "Fullscreen"], Settings.window_mode, Settings.set_window_mode)
 	Settings.window_mode_changed.connect(func() -> void: mode.select(Settings.window_mode))
 	var sizes := Settings.resolutions()
@@ -247,11 +255,21 @@ static func fill_options(column: VBoxContainer) -> HSlider:
 		if sizes[i] == Settings.resolution:
 			selected = i
 	choice_row(column, "Resolution", labels, selected, func(index: int) -> void: Settings.set_resolution(sizes[index]))
+	choice_row(column, "Distance Fog", ["Far", "Original"], Settings.fog, Settings.set_fog)
 	var crt := choice_row(column, "CRT Filter", ["Off", "On"], int(Settings.crt), func(index: int) -> void: Settings.set_crt(index == 1))
 	var curve_row := volume_row(column, "Curvature", Settings.crt_curve, Settings.set_crt_curve).get_parent() as Control
 	curve_row.visible = Settings.crt
 	crt.item_selected.connect(func(index: int) -> void: curve_row.visible = index == 1)
 	return focus
+
+
+static func section_header(column: VBoxContainer, title: String) -> void:
+	var label := Label.new()
+	label.text = title.to_upper()
+	label.add_theme_font_size_override("font_size", 26)
+	label.add_theme_color_override("font_color", CORAL)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(label)
 
 
 static func volume_row(column: VBoxContainer, title: String, value: int, apply: Callable) -> HSlider:
@@ -261,7 +279,7 @@ static func volume_row(column: VBoxContainer, title: String, value: int, apply: 
 	column.add_child(row)
 	var name := Label.new()
 	name.text = title
-	name.custom_minimum_size = Vector2(180, 0)
+	name.custom_minimum_size = Vector2(OPTION_LABEL_W, 0)
 	name.add_theme_font_size_override("font_size", 26)
 	row.add_child(name)
 	var slider := HSlider.new()
@@ -292,7 +310,7 @@ static func choice_row(column: VBoxContainer, title: String, items: Array, selec
 	column.add_child(row)
 	var name := Label.new()
 	name.text = title
-	name.custom_minimum_size = Vector2(180, 0)
+	name.custom_minimum_size = Vector2(OPTION_LABEL_W, 0)
 	name.add_theme_font_size_override("font_size", 26)
 	row.add_child(name)
 	var button := OptionButton.new()
@@ -468,7 +486,8 @@ static func checkbox_icon(on: bool) -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
-static func grabber(color: Color) -> ImageTexture:
-	var image := Image.create(8, 22, false, Image.FORMAT_RGBA8)
-	image.fill(color)
+static func grabber(color: Color, size := Vector2i(8, 22), border := 0) -> ImageTexture:
+	var image := Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
+	image.fill(ACCENT)
+	image.fill_rect(Rect2i(Vector2i(border, border), size - Vector2i(border, border) * 2), color)
 	return ImageTexture.create_from_image(image)

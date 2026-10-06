@@ -6,6 +6,8 @@ const SCENE := "res://scenes/track.tscn"
 const EDITOR_TRACK := "user://editor_track_dir"
 const WORLDS := ["wild_west", "grand_prix", "venice", "swamp", "jungle", "persia", "aqua", "snow", "castle", "rooftop"]
 const GRID := 8
+const FAR_FOG_DENSITY := 0.003
+const FAR_CLIP := 4000.0
 static var queued_dir := ""
 # FUN_0006ad00 fills the mode corridor with World Series and Time Trial for one
 # player, and Battle and Time Trial when more than one is waiting. Time trial
@@ -29,6 +31,7 @@ static var editor_return := ""
 
 var player: Car
 var camera: Camera3D
+var environment: Environment
 var track: Track
 var race: Race
 var battle: Battle
@@ -186,6 +189,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if Engine.is_editor_hint():
 		return
+	apply_fog(get_viewport().get_camera_3d())
 	if rematch.visible:
 		poll_rematch()
 		return
@@ -210,6 +214,29 @@ func _process(_delta: float) -> void:
 				race_returning = true
 				MainMenu.start_page = MainMenu.PAGE_TRACK
 				Sound.depart(func() -> void: Wipe.to(MainMenu.SCENE))
+
+
+# FUN_000325ac takes a reach of 0x3a0 (800 on snow tracks, TRK weather 1), less
+# 0x3c, less (0xf00 - camera x angle) / 8 and (camera height - 0x400) / 16 when
+# positive. The x angle is the look-down angle plus 0xc00. Cells whose nearest
+# corner is at most 4 * reach deep are drawn, and SetFogNearFar starts the fade
+# at 4 * reach - 0x4c0 with h = 0x100 against the projection's H = 0xf0.
+# Original fog starts there and is solid at the cull depth, where drawing stops.
+func apply_fog(cam: Camera3D) -> void:
+	if Settings.fog == Settings.Fog.FAR:
+		environment.fog_mode = Environment.FOG_MODE_EXPONENTIAL
+		environment.fog_density = FAR_FOG_DENSITY
+		cam.far = FAR_CLIP
+		return
+	var look_down := asin(cam.global_basis.z.y) / Car.ANGLE_TO_RAD
+	var height := cam.global_position.y / Car.UNIT_METRES
+	var reach: float = (800 if track.weather == 1 else 0x3a0) - 0x3c - maxf(0x300 - look_down, 0.0) / 8.0 - maxf(height - 0x400, 0.0) / 16.0
+	environment.fog_mode = Environment.FOG_MODE_DEPTH
+	environment.fog_density = 1.0
+	environment.fog_depth_curve = 1.0
+	environment.fog_depth_begin = (reach * 4.0 - 0x4c0) * 0xf0 / float(0x100) * Car.UNIT_METRES
+	environment.fog_depth_end = reach * 4.0 * Car.UNIT_METRES
+	cam.far = environment.fog_depth_end
 
 
 func set_paused(paused: bool) -> void:
@@ -495,9 +522,13 @@ func build_pause_options(parent: Node) -> void:
 	UiTheme.add_heading(column, "Options", 48)
 	var stack := VBoxContainer.new()
 	stack.add_theme_constant_override("separation", 22)
-	stack.custom_minimum_size = Vector2(640, 0)
+	stack.custom_minimum_size = Vector2(UiTheme.OPTIONS_W, 0)
 	column.add_child(stack)
 	pause_options_focus = UiTheme.fill_options(stack)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 22)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(gap)
 	var back := Button.new()
 	back.text = "Back"
 	back.custom_minimum_size = Vector2(520, 64)
@@ -794,8 +825,8 @@ func build_track() -> void:
 	env.ambient_light_color = Color(0.5, 0.5, 0.5)
 	env.fog_enabled = true
 	env.fog_light_color = track.sky_color
-	env.fog_density = 0.003
 	env.fog_sky_affect = 0.0
+	environment = env
 	var world_env := WorldEnvironment.new()
 	world_env.environment = env
 	add_child(world_env)
