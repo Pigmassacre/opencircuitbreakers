@@ -188,6 +188,10 @@ var cycle_input := false
 var fire_held := false
 var cycle_held := false
 var forced_accel := false
+# car+0x1f774c and car+0x1f774e: start boost frames, and full throttle seen
+# since the second digit.
+var boost_frames := 0
+var boost_pressed := false
 var on_screen := false
 var locked_heading := 0
 var spin_frames := 0
@@ -412,9 +416,11 @@ func _process(delta: float) -> void:
 
 func _physics_process(_delta: float) -> void:
 	if puppet:
+		show_bumper()
 		blend_puppet()
 		update_wheels()
 		if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0:
+			step_rumble()
 			step_appear()
 			hearing = listener_distance()
 			Sound.car_frame(self)
@@ -432,13 +438,12 @@ func _physics_process(_delta: float) -> void:
 		return
 	if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0 and items.race.cars[0] == self:
 		items.race.begin_game_frame()
-	var drawn := BUMPER_MODEL if items.race.bumper else model
-	if drawn != shown_model:
-		build_visual(drawn)
+	show_bumper()
 	if staged:
 		if vehicle_kind != VEHICLE_CAR:
 			visual.position.y = vehicle_lift() * UNIT_METRES
 		if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0:
+			check_start_boost(start_accel())
 			Sound.car_frame(self)
 			Fx.car_frame(self)
 		return
@@ -492,7 +497,7 @@ func ground_contact(ground: Dictionary, was_grounded: bool) -> void:
 		begin_splash()
 		grounded = false
 		return
-	if wreck_frames == 0 and not ground.is_empty() and track and not battle and track.surface_of(ground) == SURFACE_OUT:
+	if wreck_frames == 0 and not ground.is_empty() and track and track.surface_of(ground) == SURFACE_OUT:
 		global_position.y = ground.position.y
 		floor_normal = ground.normal
 		last_ground_height = global_position.y
@@ -527,6 +532,7 @@ func ground_contact(ground: Dictionary, was_grounded: bool) -> void:
 
 func game_frame() -> void:
 	hearing = listener_distance()
+	check_start_boost(start_accel())
 	Sound.spray(self)
 	if player_controlled and net_driven:
 		fire_input = net_fire
@@ -574,8 +580,7 @@ func game_frame() -> void:
 		begin_splash()
 		return
 	# FUN_0003a330 wrecks a grounded car whose floor polygon is surface 2.
-	# Battle (a6b24 != 0) leaves that surface alone.
-	if surface == SURFACE_OUT and not battle:
+	if surface == SURFACE_OUT:
 		surface = 0
 		wreck()
 		return
@@ -642,9 +647,14 @@ func game_frame() -> void:
 				thrust = minf(thrust * 2.0, 0x7fff)
 			if spd < 0x800 and ground_tilt() >= STEEP_THRUST_TILT:
 				thrust = minf(thrust * 2.0, 0x7fff)
-			thrust = thrust * thrust_ramp / 16.0 * accel_input / 7.0
+			if boost_frames > 0:
+				start_boost()
+				thrust = thrust * thrust_ramp / 16.0 * 1.5
+			else:
+				thrust = thrust * thrust_ramp / 16.0 * accel_input / 7.0
 		else:
 			thrust_ramp = maxi(thrust_ramp - 1, 0)
+			boost_frames = 0
 		if brake_input > 0 and (accel_input == 0 or absi(steer_input) != 7):
 			thrust -= brake * brake_input / 7.0
 	elif horizontal_speed < 0x400:
@@ -721,6 +731,48 @@ func game_frame() -> void:
 	frame_rumble(spd, travel)
 	Sound.car_frame(self)
 	Fx.car_frame(self)
+
+
+# The throttle FUN_0003a330 sees this frame. A staged car has not read its pad.
+func start_accel() -> int:
+	if net_driven:
+		return net_accel
+	if player_controlled and not replay and not autopilot_enabled:
+		return roundi(Input.get_action_strength("accelerate" + controls) * 7.0)
+	return accel_input
+
+
+# FUN_0003a330 while the countdown runs. Full throttle first pressed on GO
+# (DAT_000a6e2c 0x30) once its tick passes 0x50 boosts for 30 frames, or 60
+# from tick 0x78. The press is forgotten during 3 and 2, so holding through
+# 1 spends it.
+func check_start_boost(accel: int) -> void:
+	var race := items.race
+	if race.countdown == 0:
+		return
+	if race.count_char > 0x31:
+		boost_pressed = false
+		boost_frames = 0
+	if accel != 7:
+		return
+	if race.count_char == 0x30 and race.count_tick > 0x50 and not boost_pressed:
+		boost_frames = 0x3c if race.count_tick - 0x50 > 0x27 else 0x1e
+	boost_pressed = true
+
+
+# A boosting frame on the throttle: pattern 6 and a flame behind the car on
+# even counts. With four humans the pads take turns every two frames.
+func start_boost() -> void:
+	boost_frames -= 1
+	var list: Array[Car] = items.race.cars
+	var humans := humans_in(list)
+	if humans > 3 and (list.find(self) & 3) == ((items.race.frame >> 1) & 3):
+		rumble(6, 2)
+	if (boost_frames & 1) != 0:
+		return
+	if humans < 4:
+		rumble(6, 2)
+	Fx.start_fire(self)
 
 
 # Oil and shots spin the car in place of steering, fastest halfway through,
@@ -1250,10 +1302,26 @@ func bumper_pressed() -> bool:
 	return true
 
 
+func show_bumper() -> void:
+	var drawn := BUMPER_MODEL if items.race.bumper else model
+	if drawn != shown_model:
+		build_visual(drawn)
+
+
 # FUN_00032360 queues a vibration pattern on the car's pad. It replaces a
-# pattern of the same or lower priority and restarts it.
+# pattern of the same or lower priority and restarts it. The host passes a
+# remote player's pattern on to that player's machine.
 func rumble(pattern: int, priority: int) -> void:
-	if not player_controlled or net_driven or replay or rumble_priority > priority:
+	if net_driven:
+		Net.share_rumble.rpc_id(int(Net.peers[net_slot].id), pattern, priority)
+		return
+	if puppet or not player_controlled or replay:
+		return
+	queue_rumble(pattern, priority)
+
+
+func queue_rumble(pattern: int, priority: int) -> void:
+	if rumble_priority > priority:
 		return
 	rumble_priority = priority
 	rumble_pattern = pattern
@@ -1349,9 +1417,16 @@ func engine_scale() -> int:
 			scale -= 10
 		else:
 			scale >>= 1
-	if battle:
-		scale -= 50
 	return maxi(scale, 0)
+
+
+# car+0x1f75c0, the wreck state counting up from the crash.
+func wreck_count() -> int:
+	if splash_wreck:
+		return splash_state
+	if wreck_frames > 0:
+		return 32 - wreck_frames
+	return 0
 
 
 # (position * 3/4) >> 14, the coarse X/Y the original compares with 32.
@@ -1408,17 +1483,15 @@ func push_prop(prop: RigidBody3D, n: Vector3) -> void:
 	vel += n * closing * 0.1
 
 
-# FUN_0002a824 vibrates the pad when this is a race. The wreck state reaches 2
+# FUN_0002a824 vibrates the pad outside the front end. The wreck state reaches 2
 # in that same update, which is when FUN_00071ef0 plays tone 7.
 func wreck() -> void:
 	if wreck_frames > 0:
 		return
 	wreck_frames = WRECK_FRAMES
 	vel = Vector3.ZERO
-	if not battle:
-		rumble(5, 3)
+	rumble(5, 3)
 	Sound.scaled(0, 7, self)
-	Sound.stop_engine(self)
 	Fx.despawn(global_position)
 
 
@@ -1434,7 +1507,6 @@ func begin_splash() -> void:
 	vel = Vector3.ZERO
 	rumble(9, 3)
 	Sound.scaled(0, 10, self)
-	Sound.stop_engine(self)
 	Fx.puddle_ring(global_position)
 
 
@@ -1499,6 +1571,7 @@ func teleport(xform: Transform3D, node := -1) -> void:
 	heading = wrapi(roundi(xform.basis.get_euler().y / ANGLE_TO_RAD), 0, 4096)
 	vel = Vector3.ZERO
 	thrust_ramp = 0
+	boost_frames = 0
 	wreck_frames = 0
 	appear_frames = 0
 	visual.visible = true
@@ -1558,6 +1631,7 @@ func begin_appear() -> void:
 	if players > 1:
 		visual.visible = false
 	Fx.appear(self)
+	Sound.appear(self)
 
 
 func step_appear() -> bool:

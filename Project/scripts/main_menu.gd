@@ -96,6 +96,7 @@ var mode_best: Label
 var mode_world: Button
 var mode_trial: Button
 var mode_battle: Button
+var mode_bumper: Button
 var track_start: Button
 var track_label: Label
 var track_group: Label
@@ -1395,7 +1396,8 @@ func build_mode(column: VBoxContainer) -> void:
 	mode_best.add_theme_color_override("font_color", UiTheme.CREAM)
 	stack.add_child(mode_best)
 	mode_world = add_button(stack, "World Series", start_world_series)
-	mode_battle = add_button(stack, "Battle", start_selected_battle)
+	mode_battle = add_button(stack, "Battle", start_selected_battle.bind(false))
+	mode_bumper = add_button(stack, "Bumper Cars", start_selected_battle.bind(true))
 	mode_trial = add_button(stack, "Time Trial", start_time_trial)
 	add_nav(column, "Back", show_page.bind(track_page), false)
 
@@ -1405,7 +1407,14 @@ func open_mode() -> void:
 	mode_best.text = best_caption(record_dir(index))
 	mode_world.visible = not track_for_battle and not track_for_online and supports_ai(track_paths[index])
 	mode_battle.visible = track_for_battle or track_for_online
+	mode_bumper.visible = mode_battle.visible and not submarine(track_paths[index])
 	show_page(mode_page)
+
+
+func submarine(path: String) -> bool:
+	if path.ends_with(".json"):
+		return int(JSON.parse_string(FileAccess.get_file_as_string(path)).vehicle) == 2
+	return path.get_file().begins_with("aqua")
 
 
 func supports_ai(path: String) -> bool:
@@ -1420,12 +1429,13 @@ func start_world_series() -> void:
 	start_race(current_path())
 
 
-func start_selected_battle() -> void:
+func start_selected_battle(bumper: bool) -> void:
 	Session.time_trial = false
 	var source := current_path()
 	if track_for_online:
-		Net.begin_battle(selected_track(), level_text(source), source)
+		Net.begin_battle(selected_track(), level_text(source), source, bumper)
 	else:
+		Session.bumper = bumper
 		start_battle(source)
 
 

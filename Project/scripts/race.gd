@@ -52,7 +52,13 @@ var countdown := 0
 var count_tick := 0x18
 var count_char := 0x33
 var count_slide := 0
+# DAT_000a71b4, the digit's slide-in x. FUN_00035554 raises DAT_000a74a0 for
+# the countdown beep when it reads 0x120.
+var count_x := 0x280
+var count_beep := false
 var start_frame := 0
+# DAT_000a6de8: FUN_00037d64 found the car on node 0 or 1.
+var line_crossed := PackedByteArray()
 # DAT_000a7200: everyone drives model 8 with no items, and bumps kick twice as hard.
 var bumper := false
 var bumper_held := false
@@ -70,6 +76,7 @@ func start(race_track: Track, racers: Array[Car], player_index: int) -> void:
 		laterals.append(0x800)
 		edges.append(0x800)
 		node_changed.append(1)
+		line_crossed.append(0)
 		laps_left.append(LAPS)
 		var blocks := PackedByteArray()
 		blocks.resize(BLOCKS)
@@ -86,6 +93,7 @@ func arm_start() -> void:
 	count_tick = 0x18
 	count_char = 0x33
 	count_slide = 0
+	count_x = 0x280
 	start_frame = 0
 	refresh_staged()
 
@@ -110,6 +118,8 @@ func begin_game_frame() -> void:
 
 
 func step_countdown() -> void:
+	if count_x == 0x120:
+		count_beep = true
 	if count_slide != 0:
 		if count_slide + 1 != 12:
 			count_slide += 1
@@ -120,6 +130,7 @@ func step_countdown() -> void:
 		countdown -= 1
 		return
 	count_tick += 6
+	count_x = maxi(count_x - 0x20, 0x100)
 	if count_tick < 0x88:
 		return
 	count_char -= 1
@@ -128,13 +139,14 @@ func step_countdown() -> void:
 		count_slide = 1
 		return
 	count_tick = 0x18
+	count_x = 0x280
 
 
 # FUN_0003574c, while the countdown digits show: car 0's pad going to exactly
 # Left and Circle flips bumper cars, with more than one human, outside a
 # submarine world and a time trial.
 func toggle_bumper() -> void:
-	if Car.humans_in(cars) < 2 or time_trial or Net.in_match or cars[0].vehicle_kind == Car.VEHICLE_SUB:
+	if Car.humans_in(cars) < 2 or time_trial or cars[0].vehicle_kind == Car.VEHICLE_SUB:
 		return
 	var held := cars[0].bumper_pressed()
 	if held and not bumper_held:
@@ -187,6 +199,8 @@ func update_node(i: int) -> void:
 	var block := node >> BLOCK_SHIFT
 	if block == 0 or visited[i][block - 1] == 1:
 		visited[i][block] = 1
+		if node < 2:
+			line_crossed[i] = 1
 		if node < 2 and all_visited(i, (track.nodes.size() - 1) >> BLOCK_SHIFT):
 			visited[i].fill(0)
 			complete_lap(i)

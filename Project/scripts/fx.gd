@@ -317,6 +317,7 @@ func car_frame(car: Car) -> void:
 	elif car.accel_input == 7 and (randi() & 1) != 0:
 		smoke = true
 	if smoke:
+		Sound.puff(car)
 		var units := car.global_position / Car.UNIT_METRES
 		spawn_script(int(units.x), int(units.z), int(units.y), DRIFT_SMOKE, 9)
 
@@ -401,7 +402,19 @@ func winner_swirls(index: int) -> void:
 # flame 0x5a units behind the locked heading, jittered by a few units.
 # FUN_00080398 is the sine and FUN_00080468 the cosine.
 func boost_fire(car: Car) -> void:
-	var heading := -car.locked_heading
+	var at := behind(car, car.locked_heading)
+	spawn_script(at.x + (randi() & 0x1f) - 0x10, at.y + (randi() & 0x1f) - 0x10, at.z + (randi() & 0xf), BOOST_FIRE, 1)
+
+
+# FUN_0003a330 / FUN_0002b140. The start boost drops the same flame behind the
+# car's heading with no jitter.
+func start_fire(car: Car) -> void:
+	var at := behind(car, car.heading)
+	spawn_script(at.x, at.y, at.z, BOOST_FIRE, 1)
+
+
+func behind(car: Car, facing: int) -> Vector3i:
+	var heading := -facing
 	var back_x: int = -car.game_sine(heading) * 0x5a
 	var back_z: int = car.game_sine(heading + 0x400) * 0x5a
 	if back_x < 0:
@@ -409,10 +422,7 @@ func boost_fire(car: Car) -> void:
 	if back_z < 0:
 		back_z += 0xfff
 	var units := car.global_position / Car.UNIT_METRES
-	var x := int(units.x) + (back_x >> 12) + (randi() & 0x1f) - 0x10
-	var z := int(units.z) + (back_z >> 12) + (randi() & 0x1f) - 0x10
-	var h := int(units.y) + (randi() & 0xf)
-	spawn_script(x, z, h, BOOST_FIRE, 1)
+	return Vector3i(int(units.x) + (back_x >> 12), int(units.z) + (back_z >> 12), int(units.y))
 
 
 # FUN_0003a330 / FUN_0002b1b8: a burning car leaves a type 1 puff every 8 frames.

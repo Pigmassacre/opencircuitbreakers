@@ -16,6 +16,7 @@ static var queued_compile := ""
 # player, and Battle and Time Trial when more than one is waiting. Time trial
 # (a7138 == 2, or 4 with several players) sets DAT_000a6780 and drops the AI field.
 static var time_trial := false
+static var bumper := false
 static var trial_turn := 0
 static var trial_models := PackedInt32Array()
 static var trial_controls := PackedStringArray()
@@ -462,9 +463,10 @@ func apply_rematch(move: int, accept: bool) -> void:
 	Sound.ui()
 	rematch.visible = false
 	get_tree().paused = false
+	bumper = race.bumper
 	if Net.in_match:
 		if rematch_yes:
-			Net.begin_battle(track_dir)
+			Net.begin_battle(track_dir, "", "", bumper)
 		else:
 			Net.rematch_tracks.rpc()
 		return
@@ -925,11 +927,12 @@ func build_track() -> void:
 	var racers: Array[Car] = []
 	racers.assign(get_tree().get_nodes_in_group("cars"))
 	race.start(track, racers, racers.find(player))
+	race.bumper = bumper and Battle.players > 0 and not time_trial and racers[0].vehicle_kind != Car.VEHICLE_SUB
 	if time_trial:
 		race.ghost_tape = Settings.ghost_tape(track_dir)
 		race.prepare_trial(racers.size() - (1 if ghost_model >= 0 else 0))
 		race.arm_start()
-	elif not Net.in_match and (Battle.players > 0 or track.ai_race):
+	elif Battle.players > 0 or (track.ai_race and not Net.in_match):
 		race.arm_start()
 	if time_trial:
 		add_camera()

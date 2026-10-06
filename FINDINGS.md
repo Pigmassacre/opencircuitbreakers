@@ -39,7 +39,7 @@ Particles are additive textured quads taken from a Circuit Breakers TEX. Fire is
 
 `FUN_00032360(pad, pattern, priority, car)` queues a pad pattern only when the pad's current priority is at most the new one, and restarts its frame counter. It does nothing for a car other than 0 with one human or in a time trial, or while `_DAT_000a7318` or `_DAT_000a6930` is set. `FUN_00032434` plays the pattern once per pad read while option `_DAT_000a6cfc` is on (default on), and `FUN_00032594` clears it at the last frame. Patterns are `[small motor, large motor, frames]`; the table is `car.gd` `RUMBLE`.
 
-Several calls were once read as sounds: bump "tone 4", wreck "tone 5", rocket "tone 6", splash "tone 9", and a looping spray. They are patterns 4, 5, 6 and 9 and the water-surface pattern 2. The loose-surface sound had no source at all.
+Several calls were once read as sounds: bump "tone 4", wreck "tone 5", rocket "tone 6", splash "tone 9", and a looping spray. They are patterns 4, 5, 6 and 9 and the water-surface pattern 2. The loose-surface sound is `FUN_00072394`, keyed off the drift puff.
 
 The front-end lift (`FUN_00066d9c`) also vibrates; the port has no 3D car select.
 
@@ -49,19 +49,21 @@ The front-end lift (`FUN_00066d9c`) also vibrates; the port has no 3D car select
 
 `FUN_00024bc4` arms the countdown (`DAT_000a647c = 0x14`) for every start, battles included. `FUN_0003a330` holds every car for the whole countdown unless one human races outside a time trial.
 
+## Front end
+
+`_DAT_000a6b24` is the front-end flag: 1 at boot and while the 3D car select runs, cleared by `FUN_00028d18` when a track is picked. It is not a battle flag. Everything gated on it (the doubled bump kick, the wreck vibration, the surface-2 wreck, the engine's `+10` and the engine scale's `-50`) is front-end behavior the port has no use for.
+
+## Sound frame
+
+`FUN_000717f4` runs once per frame after the car updates: scale (`FUN_00072ee0`), music, reverb, the engines (`FUN_00073d58`, `FUN_00074028`, `FUN_00071b1c`), then the one-shot checks (wreck, spray, respawn, bump, loose surface, countdown beep). `FUN_00070bcc` and `FUN_00070cb8` set `_DAT_000a6e90` through `FUN_00070d94` whenever they key a voice, loops included. Only when nothing was keyed that frame do the round robin (`FUN_00071cc0` for car `DAT_000a626c`), the rain (`FUN_00073c60`) and the item tones (`FUN_00072864`) run, so the ones further down the list can lose a frame. `_DAT_000a7418` limits the engines and the round robin to eight cars with one human and to the humans otherwise. `sound.gd` `_physics_process` is this pass.
+
+`FUN_00070940` sets reverb type 4 (Studio C) at depth 0. Every `GAME1` tone has the reverb bit, so the port puts the reverb on the whole SFX bus.
+
+`_DAT_000a7318` is set by `FUN_0006ad00`, the 2D mode menu. `FUN_00072ff8` and `FUN_00073108` are its button beeps and `FUN_0007258c` is front-end only; the port's menus use `Sound.ui`.
+
 ## Open differences
 
-`FUN_00071ef0` plays wreck tone 7 while the substate is 0 and tone 10 after that. `wreck` always plays tone 7.
-
-The start boost (`car+0x18c`, sound `(1, 2)`, pattern 6) is not ported.
-
-Sounds with no port: `FUN_00072160` `(0, 6)`, `FUN_00072394` node flags 8 and `0x10` `(0, 9)` and `(0, 8)`, `FUN_0007258c` `(0, 0xc)` and `(0, 0xe)`, `FUN_00072ff8` and `FUN_00073108` `(0, 0xb)`, `FUN_00073c60` `(1, 9)`, the node flag bit 0 loop in `FUN_00026628` `(1, 7)`, and the grow slowdown `(1, 5)` when `1f7730` is 1 or `0x5a`.
-
-The engine is always the `FUN_00074d00` voice. The race engine path (`FUN_0007441c`, `FUN_00074310`, `FUN_000744e0`) and the boat whine (`FUN_000749bc`) are not ported.
-
-Netplay clients get no vibration, and netplay starts have no countdown, so bumper cars cannot be toggled online.
-
-`FUN_00074d00` adds 10 to the engine tone while the front end is up (`_DAT_000a6b24 != 0`) and subtracts 15 otherwise. `car_frame` adds 10 when `car.battle` is set.
+`FUN_0002ac8c` and `FUN_0002aec4` also raise the respawn tone (`_DAT_000a6b10`); their callers are not identified. The second `_DAT_000a6e38` setter, near decomp line 39374, is not identified either.
 
 ## Function index
 
@@ -95,7 +97,7 @@ Netplay clients get no vibration, and netplay starts have no countdown, so bumpe
 | `FUN_0003496c` | `autopilot.gd` `off_track` | AI recovery past an edge |
 | `FUN_00034afc` | `autopilot.gd` `on_track` | AI corner heading |
 | `FUN_00034cb4` | `track_camera.gd` `update_node` | Camera segment from the car's node |
-| `FUN_00035554` | `race.gd` `step_countdown` | Countdown step |
+| `FUN_00035554` | `race.gd` `step_countdown` | Countdown step, beep flag |
 | `FUN_0003574c` | `race.gd` `toggle_bumper`, `hud.gd` `paint_bumper` | Bumper-car toggle and sign |
 | `FUN_00035c5c` | `track_camera.gd` `_physics_process` | 1-player race camera |
 | `FUN_00036f5c` | `battle_camera.gd` `_physics_process` | Battle camera focus |
@@ -106,7 +108,7 @@ Netplay clients get no vibration, and netplay starts have no countdown, so bumpe
 | `FUN_00038418` | `track.gd` `search_gate` | Gate search |
 | `FUN_000388c4` | `track.gd` `lane_height`, `battle.gd` `grid_slot` | Lane placement, respawn clear, battle grid |
 | `FUN_000398c4` | `battle.gd` `set_back` | Expert battle respawn, two nodes back |
-| `FUN_0003a330` | `car.gd` `game_frame`, `listener_distance`, `frame_rumble`, `race.gd` `refresh_staged` | Car update, bump shove, pickup collection, start hold |
+| `FUN_0003a330` | `car.gd` `game_frame`, `listener_distance`, `frame_rumble`, `check_start_boost`, `start_boost`, `race.gd` `refresh_staged` | Car update, bump shove, pickup collection, start hold, start boost |
 | `FUN_0003ea8c` | `car.gd` `land` | Landing, pattern 4 |
 | `FUN_0003fbb8` | `car.gd` `spin_out` | Spin; pattern 8 on car 1's pad |
 | `FUN_00043c1c` | `car.gd` `bounce_off_wall`, `wall_rumble` | Wall hit |
@@ -143,16 +145,37 @@ Netplay clients get no vibration, and netplay starts have no countdown, so bumpe
 | `FUN_000715c0` | `sound.gd` `music_frame` | Start or poll music, fade in |
 | `FUN_00071778` | `sound.gd` `fade_music` | Stop the CD and advance |
 | `FUN_000717f4` | `sound.gd` `music_frame` | Per-frame audio |
+| `FUN_00071104` | `sound.gd` `step_reverb` | Reverb depth up |
+| `FUN_00071168` | `sound.gd` `step_reverb` | Reverb depth down |
+| `FUN_00071b1c` | `sound.gd` `begin_race` | Key the four drones |
+| `FUN_00071cc0` | `sound.gd` `car_loops` | Round-robin loops for one car |
 | `FUN_00071d10` | `sound.gd` `music_frame` | Music playlist |
-| `FUN_00071ef0` | `car.gd` `wreck` | Wreck tone |
+| `FUN_00071ef0` | `car.gd` `wreck`, `begin_splash` | Wreck tone 7, splash tone 10 |
 | `FUN_0007202c` | `sound.gd` `spray` | Water spray one-shot |
+| `FUN_00072160` | `sound.gd` `appear_tone` | Respawn tone |
 | `FUN_0007220c` | `car.gd` `bump_tones` | Car-bump tone |
-| `FUN_00072864` | `items.gd` `item_sounds` | Item timer tones |
-| `FUN_00072e58` | `sound.gd` `effect` | One-shot volume request |
+| `FUN_00072394` | `sound.gd` `puff_tone` | Loose-surface tone off the drift puff |
+| `FUN_00072864` | `items.gd` `item_sounds`, `sound.gd` `item_tones` | Item timer, pickup, slowdown, start boost and line tones |
+| `FUN_00072e58` | `sound.gd` `scaled` | One-shot volume request |
 | `FUN_00072ee0` | `car.gd` `volume_scale`, `engine_scale` | Per-car sound scale |
-| `FUN_00074d00` | `sound.gd` `car_frame` | Engine voice level |
+| `FUN_000731c4` | `sound.gd` `node_loop` | Node flag 1 loop |
+| `FUN_0007335c` | `sound.gd` `node_loop` | Node flag `0x40` loop |
+| `FUN_000735bc` | `sound.gd` `node_loop` | Node flag 2 loop, cars 0 and 1 |
+| `FUN_00073748` | `sound.gd` `node_loop` | Node flag `0x80` loop |
+| `FUN_000738c8` | `sound.gd` `node_loop` | Node flag 4 loop |
+| `FUN_00073b08` | `sound.gd` `node_loop` | Node loop level |
+| `FUN_00073c60` | `sound.gd` `rain_loop` | Rain loop |
+| `FUN_00073d58` | `sound.gd` `engine_level` | Gear voice level |
+| `FUN_00074028` | `sound.gd` `car_frame` | Engine dispatch |
+| `FUN_00074310` | `sound.gd` `engine_gear` | Key the next gear sweep |
+| `FUN_0007441c` | `sound.gd` `engine_idle` | Cut the sweep off the throttle |
+| `FUN_000744e0` | `sound.gd` `drone_frame` | Drone level and revs |
+| `FUN_00074864` | `sound.gd` `engine_pitch` | Gear sweep bend |
+| `FUN_000749bc` | `sound.gd` `whine` | Boat whine |
+| `FUN_00074d00` | `sound.gd` `sub_engine` | Submarine engine voice |
+| `FUN_00075118` | `sound.gd` `countdown_beep` | Countdown beeps |
 | `FUN_00075e3c` | not ported | `CdGetToc2`; song 0 is CD track 2 |
-| `FUN_00084834` | `sound.gd` `car_frame` | SPU voice volume, `volume * 0x81` |
+| `FUN_00084834` | `sound.gd` `set_level` | SPU voice volume, `volume * 0x81` |
 | `FUN_0008525c` | `sound.gd` `note_pitch` | Note to SPU pitch |
 | `FUN_000858f4` | `sound.gd` `spu_amplitude` | One-shot SPU level |
 | `FUN_00085dd8` | `sound.gd` `bend_scale` | Pitch bend around note 64 |

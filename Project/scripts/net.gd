@@ -87,7 +87,7 @@ func push_profile() -> void:
 		submit_profile.rpc_id(1, local_model, local_expert)
 
 
-func begin_battle(path: String, level_text := "", source := "") -> void:
+func begin_battle(path: String, level_text := "", source := "", bumper := false) -> void:
 	if not is_host() or peers.size() < 2:
 		status = "Need at least two players"
 		changed.emit()
@@ -101,7 +101,7 @@ func begin_battle(path: String, level_text := "", source := "") -> void:
 	for peer in peers:
 		models.append(int(peer.model))
 		experts.append(int(peer.expert))
-	begin.rpc(path, models, experts, Battle.target, Battle.pickups, false, -1)
+	begin.rpc(path, models, experts, Battle.target, Battle.pickups, false, -1, bumper)
 
 
 func begin_trial(path: String, level_text := "", source := "") -> void:
@@ -118,7 +118,7 @@ func begin_trial(path: String, level_text := "", source := "") -> void:
 	for peer in peers:
 		models.append(int(peer.model))
 		experts.append(int(peer.expert))
-	begin.rpc(path, models, experts, Battle.target, Battle.pickups, true, Settings.ghost_model(path))
+	begin.rpc(path, models, experts, Battle.target, Battle.pickups, true, Settings.ghost_model(path), false)
 
 
 func restart_trial(path: String) -> void:
@@ -127,7 +127,7 @@ func restart_trial(path: String) -> void:
 	for i in Battle.players:
 		models.append(Battle.models[i])
 		experts.append(Battle.experts[i])
-	begin.rpc(path, models, experts, Battle.target, Battle.pickups, true, Settings.ghost_model(path))
+	begin.rpc(path, models, experts, Battle.target, Battle.pickups, true, Settings.ghost_model(path), false)
 
 
 func publish_input() -> void:
@@ -190,6 +190,8 @@ func publish_state() -> void:
 		buffer.put_u32(session.battle.score_serial)
 		buffer.put_u16(session.battle.round_frame)
 		buffer.put_8(session.battle.match_winner)
+		buffer.put_u8(session.race.countdown)
+		buffer.put_u8(1 if session.race.bumper else 0)
 		for i in count:
 			buffer.put_16(session.battle.points[i])
 			buffer.put_16(session.battle.round_points[i])
@@ -350,10 +352,11 @@ func share_level(path: String, text: String) -> void:
 
 
 @rpc("authority", "reliable", "call_local")
-func begin(path: String, models: PackedInt32Array, experts: PackedInt32Array, target: int, pickups: int, trial: bool, ghost: int) -> void:
+func begin(path: String, models: PackedInt32Array, experts: PackedInt32Array, target: int, pickups: int, trial: bool, ghost: int, bumper: bool) -> void:
 	in_match = true
 	get_tree().paused = false
 	Session.time_trial = trial
+	Session.bumper = bumper
 	Session.ghost_model = ghost
 	Battle.players = models.size()
 	Battle.target = target
@@ -406,6 +409,8 @@ func snapshot(blob: PackedByteArray) -> void:
 		battle.score_serial = buffer.get_u32()
 		battle.round_frame = buffer.get_u16()
 		battle.match_winner = buffer.get_8()
+		session.race.countdown = buffer.get_u8()
+		session.race.bumper = buffer.get_u8() == 1
 		if battle.score_from.size() != count:
 			battle.score_from.resize(count)
 		for i in count:
@@ -458,8 +463,14 @@ func snapshot(blob: PackedByteArray) -> void:
 
 
 @rpc("authority", "reliable", "call_remote")
-func share_effect(program: int, tone: int, volume: int) -> void:
-	Sound.play_effect(program, tone, volume)
+func share_effect(program: int, tone: int, volume: int, note: int) -> void:
+	Sound.play_effect(program, tone, volume, note)
+
+
+@rpc("authority", "reliable", "call_remote")
+func share_rumble(pattern: int, priority: int) -> void:
+	var session := get_tree().current_scene as Session
+	session.race.cars[slot].queue_rumble(pattern, priority)
 
 
 @rpc("any_peer", "reliable")

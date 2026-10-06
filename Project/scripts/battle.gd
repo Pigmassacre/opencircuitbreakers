@@ -296,6 +296,7 @@ func vanish(i: int) -> void:
 	car.vel = Vector3.ZERO
 	Sound.stop_engine(car)
 	Fx.appear(car)
+	Sound.appear(car)
 
 
 func end_round(winner: int) -> void:

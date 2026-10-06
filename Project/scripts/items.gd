@@ -251,6 +251,7 @@ func collect(car: Car) -> void:
 		return
 	pickup = false
 	cooldown = 0x32
+	Sound.pickup()
 	car.item_total += 1
 	car.selected_item = pickup_type
 	car.item_counts[pickup_type] += 5 if pickup_type == SHOT else 1
@@ -280,11 +281,11 @@ func run_item(car: Car) -> void:
 			stilts(car)
 		BOUNCE:
 			bounce(car)
-	item_sounds(car)
 
 
 # FUN_00072864 plays a tone when an item's timer lands on one of these frames,
-# at the car's distance scale. Shrink takes its volume from tone 13.
+# at the car's distance scale. Shrink takes its volume from tone 13. Sound runs
+# it for every car at the end of the frame.
 func item_sounds(car: Car) -> void:
 	var kind := car.fired_item
 	var t: int = car.item_timers[OIL] if kind == OIL or kind == GLUE else car.item_timers[kind]
