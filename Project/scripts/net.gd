@@ -87,13 +87,15 @@ func push_profile() -> void:
 		submit_profile.rpc_id(1, local_model, local_expert)
 
 
-func begin_battle(path: String, level_text := "") -> void:
+func begin_battle(path: String, level_text := "", source := "") -> void:
 	if not is_host() or peers.size() < 2:
 		status = "Need at least two players"
 		changed.emit()
 		return
 	if level_text != "":
 		share_level.rpc(path, level_text)
+	if source.ends_with(".json"):
+		Session.queue_course(source, path)
 	var models := PackedInt32Array()
 	var experts := PackedInt32Array()
 	for peer in peers:
@@ -102,13 +104,15 @@ func begin_battle(path: String, level_text := "") -> void:
 	begin.rpc(path, models, experts, Battle.target, Battle.pickups, false, -1)
 
 
-func begin_trial(path: String, level_text := "") -> void:
+func begin_trial(path: String, level_text := "", source := "") -> void:
 	if not is_host() or peers.size() < 2:
 		status = "Need at least two players"
 		changed.emit()
 		return
 	if level_text != "":
 		share_level.rpc(path, level_text)
+	if source.ends_with(".json"):
+		Session.queue_course(source, path)
 	var models := PackedInt32Array()
 	var experts := PackedInt32Array()
 	for peer in peers:
@@ -342,7 +346,7 @@ func share_level(path: String, text: String) -> void:
 	var file := FileAccess.open(source, FileAccess.WRITE)
 	file.store_string(text)
 	file.close()
-	LevelBuild.compile(LevelBuild.load_level(source), path)
+	Session.queue_course(source, path)
 
 
 @rpc("authority", "reliable", "call_local")

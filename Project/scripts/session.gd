@@ -10,6 +10,8 @@ const FAR_FOG_DENSITY := 0.003
 const FAR_CLIP := 4000.0
 const PAUSE_MARGIN := 32.0
 static var queued_dir := ""
+static var queued_source := ""
+static var queued_compile := ""
 # FUN_0006ad00 fills the mode corridor with World Series and Time Trial for one
 # player, and Battle and Time Trial when more than one is waiting. Time trial
 # (a7138 == 2, or 4 with several players) sets DAT_000a6780 and drops the AI field.
@@ -66,9 +68,40 @@ var rematch_no_button: Button
 var rematch_scores: Array[Label] = []
 
 
+static func queue_course(source: String, dir: String) -> void:
+	queued_source = source
+	queued_compile = dir
+
+
 static func play(dir: String) -> void:
+	var source := queued_source
+	var compile_dir := queued_compile
+	queued_source = ""
+	queued_compile = ""
+	if source != "" and compile_dir == dir:
+		play_course(source, dir)
+		return
 	queued_dir = dir
 	Wipe.to(SCENE)
+
+
+static func launch(path: String) -> void:
+	if path.ends_with(".json"):
+		play_course(path, LevelBuild.course_dir(path))
+		return
+	play(path)
+
+
+static func play_course(path: String, dir: String) -> void:
+	Wipe.to(SCENE, func() -> void:
+		Session.queued_dir = LevelBuild.compile(LevelBuild.load_level(path), dir)
+	)
+
+
+static func play_level(level: Dictionary, dir: String) -> void:
+	Wipe.to(SCENE, func() -> void:
+		Session.queued_dir = LevelBuild.compile(level, dir)
+	)
 
 
 static func directory(world: String, number: int, reverse: bool) -> String:

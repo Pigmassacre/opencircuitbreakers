@@ -2282,7 +2282,8 @@ func play(trial: bool) -> void:
 		flash("Draw a closed road first")
 		return
 	write_active()
-	var dir := LevelBuild.compile(level, LevelBuild.play_dir(int(level.vehicle)))
+	var course := level
+	var out := LevelBuild.play_dir(int(level.vehicle))
 	Session.editor_return = SCENE
 	Session.time_trial = trial
 	if trial:
@@ -2294,7 +2295,7 @@ func play(trial: bool) -> void:
 		Battle.players = 2
 		Battle.wins.fill(0)
 		Session.rebind_pads()
-	Sound.depart(func() -> void: Session.play(dir))
+	Sound.depart(func() -> void: Session.play_level(course, out))
 
 
 func leave() -> void:

@@ -27,7 +27,7 @@ func _ready() -> void:
 	layer.add_child(shade)
 
 
-func to(path: String) -> void:
+func to(path: String, during: Callable = Callable()) -> void:
 	if busy:
 		return
 	busy = true
@@ -36,15 +36,23 @@ func to(path: String) -> void:
 	shade.offset_left = 0.0
 	shade.offset_right = 0.0
 	var width := get_viewport().get_visible_rect().size.x
+	await sweep("offset_right", width)
+	# The cover reaches black before this frame is drawn. Wait until that frame is up.
+	await get_tree().process_frame
+	get_tree().paused = false
+	if during.is_valid():
+		during.call()
+	get_tree().change_scene_to_file(path)
+	await get_tree().process_frame
+	await sweep("offset_left", width)
+	clear()
+
+
+func sweep(property: String, target: float) -> void:
 	var tween := create_tween()
 	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-	tween.tween_property(shade, "offset_right", width, SWEEP).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_callback(func() -> void:
-		get_tree().paused = false
-		get_tree().change_scene_to_file(path)
-	)
-	tween.tween_property(shade, "offset_left", width, SWEEP).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_callback(clear)
+	tween.tween_property(shade, property, target, SWEEP).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	await tween.finished
 
 
 func clear() -> void:

@@ -1423,24 +1423,22 @@ func supports_ai(path: String) -> bool:
 
 func start_world_series() -> void:
 	Session.time_trial = false
-	start_race(selected_track())
+	start_race(current_path())
 
 
 func start_selected_battle() -> void:
 	Session.time_trial = false
 	var source := current_path()
-	var dir := selected_track()
 	if track_for_online:
-		Net.begin_battle(dir, level_text(source))
+		Net.begin_battle(selected_track(), level_text(source), source)
 	else:
-		start_battle(dir)
+		start_battle(source)
 
 
 func start_time_trial() -> void:
 	var source := current_path()
-	var dir := selected_track()
 	if track_for_online:
-		Net.begin_trial(dir, level_text(source))
+		Net.begin_trial(selected_track(), level_text(source), source)
 		return
 	Session.time_trial = true
 	Session.trial_turn = 0
@@ -1456,7 +1454,7 @@ func start_time_trial() -> void:
 		Session.trial_models = PackedInt32Array([race_model])
 		Session.trial_controls = PackedStringArray([""])
 		Battle.players = 0
-	Sound.depart(func() -> void: Session.play(dir))
+	Sound.depart(func() -> void: Session.launch(source))
 
 
 func current_path() -> String:
@@ -1473,7 +1471,7 @@ func level_text(source: String) -> String:
 func selected_track() -> String:
 	var path := current_path()
 	if path.ends_with(".json"):
-		return LevelBuild.compile(LevelBuild.load_level(path), LevelBuild.course_dir(path))
+		return LevelBuild.course_dir(path)
 	return path
 
 
@@ -2686,11 +2684,11 @@ func fill_win_row(row: HBoxContainer, count: int, online: bool) -> void:
 		box.add_child(number)
 
 
-func start_battle(dir: String) -> void:
+func start_battle(path: String) -> void:
 	Session.time_trial = false
 	Battle.players = battle_players
 	Session.rebind_pads()
-	Sound.depart(func() -> void: Session.play(dir))
+	Sound.depart(func() -> void: Session.launch(path))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -3130,7 +3128,7 @@ func first_visible_button(node: Node) -> Button:
 	return null
 
 
-func start_race(dir: String) -> void:
+func start_race(path: String) -> void:
 	Session.time_trial = false
 	Battle.players = 0
-	Sound.depart(func() -> void: Session.play(dir))
+	Sound.depart(func() -> void: Session.launch(path))
