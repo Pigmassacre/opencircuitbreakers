@@ -58,6 +58,8 @@ var crt := false
 var crt_curve := 0
 var crt_rect: ColorRect
 var best_times := {}
+var best_places := {}
+var best_fields := {}
 var trial_times := {}
 var ghosts := {}
 var ghost_models := {}
@@ -99,6 +101,12 @@ func _ready() -> void:
 				var seconds := float(config.get_value("times", key))
 				if not best_times.has(dir) or seconds < float(best_times[dir]):
 					best_times[dir] = seconds
+		if config.has_section("places"):
+			for key in config.get_section_keys("places"):
+				best_places[String(key)] = int(config.get_value("places", key))
+		if config.has_section("place_fields"):
+			for key in config.get_section_keys("place_fields"):
+				best_fields[String(key)] = int(config.get_value("place_fields", key))
 		if config.has_section("trials"):
 			for key in config.get_section_keys("trials"):
 				trial_times[String(key)] = float(config.get_value("trials", key))
@@ -331,6 +339,26 @@ func record_best(scene: String, seconds: float) -> bool:
 	return true
 
 
+func best_place(scene: String) -> int:
+	if not best_places.has(scene):
+		return -1
+	return int(best_places[scene])
+
+
+func best_field(scene: String) -> int:
+	return int(best_fields[scene])
+
+
+func record_place(scene: String, place: int, field: int) -> bool:
+	var previous := best_place(scene)
+	if previous >= 1 and place >= previous:
+		return false
+	best_places[scene] = place
+	best_fields[scene] = field
+	save()
+	return true
+
+
 func trial_time(dir: String) -> float:
 	if not trial_times.has(dir):
 		return -1.0
@@ -378,6 +406,10 @@ func save() -> void:
 	config.set_value("display", "crt_curve", crt_curve)
 	for scene in best_times:
 		config.set_value("times", scene, best_times[scene])
+	for scene in best_places:
+		config.set_value("places", scene, best_places[scene])
+	for scene in best_fields:
+		config.set_value("place_fields", scene, best_fields[scene])
 	for dir in trial_times:
 		config.set_value("trials", dir, trial_times[dir])
 	for dir in ghosts:

@@ -1403,8 +1403,7 @@ func build_mode(column: VBoxContainer) -> void:
 
 func open_mode() -> void:
 	var index := battle_track if track_for_battle or track_for_online else race_track
-	var best := Settings.best_time(record_dir(index))
-	mode_best.text = "Best %s" % Hud.format_time(best) if best >= 0.0 else "Best —"
+	mode_best.text = best_caption(record_dir(index))
 	mode_world.visible = not track_for_battle and not track_for_online and supports_ai(track_paths[index])
 	mode_battle.visible = track_for_battle or track_for_online
 	show_page(mode_page)
@@ -1478,6 +1477,15 @@ func record_dir(index: int) -> String:
 	if path.ends_with(".json"):
 		return LevelBuild.course_dir(path)
 	return path
+
+
+func best_caption(dir: String) -> String:
+	var seconds := Settings.best_time(dir)
+	var caption := "Best %s" % Hud.format_time(seconds) if seconds >= 0.0 else "Best —"
+	var place := Settings.best_place(dir)
+	if place < 1:
+		return caption
+	return "%s\nPlace %d/%d" % [caption, place, Settings.best_field(dir)]
 
 
 func fill_tracks(race: bool) -> void:
@@ -1769,8 +1777,7 @@ func show_track(index: int) -> void:
 		if track_groups[index] > 0:
 			track_group.text = "Group %d" % track_groups[index]
 		track_best.visible = true
-		var best := Settings.best_time(record_dir(index))
-		track_best.text = "Best %s" % Hud.format_time(best) if best >= 0.0 else "Best —"
+		track_best.text = best_caption(record_dir(index))
 	var path := track_paths[index]
 	var tab := 1 if path.ends_with(".json") else 0
 	listed_pick[tab] = index

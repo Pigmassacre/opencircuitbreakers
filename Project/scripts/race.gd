@@ -29,6 +29,7 @@ var places := PackedInt32Array()
 var lap_started := PackedFloat64Array()
 var finish_time := PackedFloat64Array()
 var new_best := false
+var new_place := false
 var lap_times: Array[PackedFloat64Array] = []
 var time := 0.0
 var frame := 0

@@ -213,8 +213,10 @@ func _process(_delta: float) -> void:
 			if not best_noted:
 				best_noted = true
 				race.new_best = Settings.record_best(track_dir, race.finish_time[race.player])
+				if race.cars.size() > 1:
+					race.new_place = Settings.record_place(track_dir, race.place(race.player), race.cars.size())
 			race_hold += _delta
-			if race_hold >= (4.0 if race.new_best else 2.0):
+			if race_hold >= (4.0 if race.new_best or race.new_place else 2.0):
 				race_returning = true
 				MainMenu.start_page = MainMenu.PAGE_TRACK
 				Sound.depart(func() -> void: Wipe.to(MainMenu.SCENE))

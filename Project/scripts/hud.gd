@@ -90,16 +90,28 @@ func _draw() -> void:
 		var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(80 * s)).x
 		var top := size.y * 0.38
 		outlined(Vector2((size.x - width) / 2.0, top), text, 80, s)
+		var line := top + 88.0 * s
+		var gold := Color(1.0, 0.82, 0.28)
+		if not Session.time_trial and race.cars.size() > 1:
+			var standing := "%d/%d" % [race.place(me), race.cars.size()]
+			var standing_size := 52
+			var standing_width := font.get_string_size(standing, HORIZONTAL_ALIGNMENT_LEFT, -1, int(standing_size * s)).x
+			outlined(Vector2((size.x - standing_width) / 2.0, line), standing, standing_size, s, gold if race.new_place else TEXT_COLOR)
+			line += 64.0 * s
+			if race.new_place:
+				var place_banner := "BEST PLACE"
+				var place_width := font.get_string_size(place_banner, HORIZONTAL_ALIGNMENT_LEFT, -1, int(40 * s)).x
+				outlined(Vector2((size.x - place_width) / 2.0, line), place_banner, 40, s, gold)
+				line += 56.0 * s
 		if race.new_best:
 			var banner := "NEW BEST"
 			var banner_size := 52
 			var banner_width := font.get_string_size(banner, HORIZONTAL_ALIGNMENT_LEFT, -1, int(banner_size * s)).x
-			var gold := Color(1.0, 0.82, 0.28)
-			outlined(Vector2((size.x - banner_width) / 2.0, top + 88.0 * s), banner, banner_size, s, gold)
+			outlined(Vector2((size.x - banner_width) / 2.0, line), banner, banner_size, s, gold)
 			var clock := format_time(race.finish_time[me])
 			var clock_size := 40
 			var clock_width := font.get_string_size(clock, HORIZONTAL_ALIGNMENT_LEFT, -1, int(clock_size * s)).x
-			outlined(Vector2((size.x - clock_width) / 2.0, top + 148.0 * s), clock, clock_size, s, gold)
+			outlined(Vector2((size.x - clock_width) / 2.0, line + 60.0 * s), clock, clock_size, s, gold)
 
 
 func advance_countdown(delta: float) -> void:
