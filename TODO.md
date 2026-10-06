@@ -4,6 +4,7 @@
 
 - A multiple-cell copy and paste function would be really good. As in a Select-tool that allows you to drag and select multiple cells and then place a copy of that.
 - Fix all shadowed variable warnings.
+- Add the ability to include custom cars.
 
 ### Optional Polish
 
