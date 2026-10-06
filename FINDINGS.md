@@ -63,7 +63,9 @@ The front-end lift (`FUN_00066d9c`) also vibrates; the port has no 3D car select
 
 ## Open differences
 
-`FUN_0002ac8c` and `FUN_0002aec4` also raise the respawn tone (`_DAT_000a6b10`); their callers are not identified. The second `_DAT_000a6e38` setter, near decomp line 39374, is not identified either.
+`FUN_00062944` runs only in the front end. It raises the respawn tone through `FUN_0002ac8c` when a player locks in a car, and the loose-surface tone (`_DAT_000a6e38`) from the select cars' dust.
+
+The tournament milestone celebration is not ported. When car 0 finishes having won every race of the world (`_DAT_000a6b1c`) and `FUN_0005c1e8`'s completion percentage (`_DAT_000a6b70`, top-three points over the maximum) is exactly 50 or 100, `_DAT_000a6fd8` takes that value. `FUN_00037b44` then eases the camera into a flyby and `FUN_0002aec4` drops type `0x4e` particles a few nodes behind car 0. `FUN_00072160` plays program 1 tone `0xf` at a random note instead of the respawn tone, and `FUN_00029b54` ends the sequence. The port keeps best places but has no completion percentage.
 
 ## Function index
 
