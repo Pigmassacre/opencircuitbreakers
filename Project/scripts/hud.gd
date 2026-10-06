@@ -6,6 +6,11 @@ const OUTLINE := 10
 const SHADOW := Vector2(4.0, 4.0)
 const TEXT_COLOR := Color(0.96, 0.96, 0.96)
 const LAP_TIME_COLOR := Color(0.95, 0.12, 0.1)
+const GOLD := Color(1.0, 0.82, 0.28)
+const ICON_FLAG := preload("res://icons/flag.png")
+const ICON_MEDAL := preload("res://icons/medal1.png")
+const ICON_STAR := preload("res://icons/star.png")
+const ICON_TROPHY := preload("res://icons/trophy.png")
 const SPEED_MAX := 160.0
 const SPEED_STEP := 20.0
 const DIAL_RADIUS := 92.0
@@ -32,6 +37,10 @@ var score_seen := 0
 var score_anim := 0.0
 var count_layer: CountdownLayer
 var count_clock := -1.0
+var finish_shown := false
+var finish_title := 0.0
+var finish_place := 0.0
+var finish_mark := 0.0
 
 
 func _ready() -> void:
@@ -62,6 +71,7 @@ func _process(delta: float) -> void:
 	if battle and battle.score_serial > 0 and score_anim < SCORE_TOTAL:
 		score_anim += delta
 	advance_countdown(delta)
+	watch_finish()
 	count_layer.queue_redraw()
 	queue_redraw()
 
@@ -86,32 +96,29 @@ func _draw() -> void:
 	draw_times(me, s)
 	draw_map(me, s)
 	if race.finish_time[me] >= 0.0:
-		var text := "FINISHED"
-		var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(80 * s)).x
-		var top := size.y * 0.38
-		outlined(Vector2((size.x - width) / 2.0, top), text, 80, s)
-		var line := top + 88.0 * s
-		var gold := Color(1.0, 0.82, 0.28)
-		if not Session.time_trial and race.cars.size() > 1:
-			var standing := "%d/%d" % [race.place(me), race.cars.size()]
-			var standing_size := 52
-			var standing_width := font.get_string_size(standing, HORIZONTAL_ALIGNMENT_LEFT, -1, int(standing_size * s)).x
-			outlined(Vector2((size.x - standing_width) / 2.0, line), standing, standing_size, s, gold if race.new_place else TEXT_COLOR)
-			line += 64.0 * s
-			if race.new_place:
-				var place_banner := "BEST PLACE"
-				var place_width := font.get_string_size(place_banner, HORIZONTAL_ALIGNMENT_LEFT, -1, int(40 * s)).x
-				outlined(Vector2((size.x - place_width) / 2.0, line), place_banner, 40, s, gold)
-				line += 56.0 * s
-		if race.new_best:
-			var banner := "NEW BEST"
-			var banner_size := 52
-			var banner_width := font.get_string_size(banner, HORIZONTAL_ALIGNMENT_LEFT, -1, int(banner_size * s)).x
-			outlined(Vector2((size.x - banner_width) / 2.0, line), banner, banner_size, s, gold)
-			var clock := format_time(race.finish_time[me])
-			var clock_size := 40
-			var clock_width := font.get_string_size(clock, HORIZONTAL_ALIGNMENT_LEFT, -1, int(clock_size * s)).x
-			outlined(Vector2((size.x - clock_width) / 2.0, line + 60.0 * s), clock, clock_size, s, gold)
+		draw_finish(me, s)
+
+
+func watch_finish() -> void:
+	if finish_shown or battle or not race:
+		return
+	var me := race.cars.find(player)
+	if race.finish_time[me] < 0.0:
+		return
+	finish_shown = true
+	var show_place := not Session.time_trial and race.cars.size() > 1
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(self, "finish_title", 1.0, 0.46).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if show_place:
+		tween.tween_property(self, "finish_place", 1.0, 0.46).set_delay(0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	else:
+		finish_place = 1.0
+	if race.new_best:
+		var delay := 0.24 if show_place else 0.12
+		tween.tween_property(self, "finish_mark", 1.0, 0.46).set_delay(delay).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	else:
+		finish_mark = 1.0
 
 
 func advance_countdown(delta: float) -> void:
@@ -171,6 +178,149 @@ class CountdownLayer extends Control:
 		draw_string_outline(hud.font, pos + shadow, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, outline, Color(0.0, 0.0, 0.0, 0.6 * alpha))
 		draw_string_outline(hud.font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, outline, Color(0.0, 0.0, 0.0, alpha))
 		draw_string(hud.font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(Hud.TEXT_COLOR.r, Hud.TEXT_COLOR.g, Hud.TEXT_COLOR.b, alpha))
+
+
+func draw_finish(me: int, s: float) -> void:
+	var show_place := not Session.time_trial and race.cars.size() > 1
+	var place_text := ""
+	var field_text := ""
+	var place_color := TEXT_COLOR
+	if show_place:
+		place_text = ordinal(race.place(me))
+		field_text = "/%d" % race.cars.size()
+		if race.new_place:
+			place_color = GOLD
+	var time_main := ""
+	var time_cents := ""
+	if race.new_best:
+		var total := int(race.finish_time[me] * 100.0)
+		time_main = "%d:%02d" % [total / 6000, total / 100 % 60]
+		time_cents = "%02d" % (total % 100)
+
+	var title := "FINISHED"
+	var title_size := 68
+	var title_px := int(title_size * s)
+	var flag := 58.0 * s
+	var title_gap := 16.0 * s
+	var title_w := font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, title_px).x
+	var title_row := flag + title_gap + title_w
+	var title_h := font.get_ascent(title_px) + font.get_descent(title_px)
+
+	var badge := 78.0 * s
+	var place_px := int(50 * s)
+	var field_px := int(26 * s)
+	var time_px := int(46 * s)
+	var cents_px := int(23 * s)
+	var text_gap := 8.0 * s
+	var place_text_w := 0.0
+	var time_text_w := 0.0
+	if show_place:
+		place_text_w = font.get_string_size(place_text, HORIZONTAL_ALIGNMENT_LEFT, -1, place_px).x + text_gap + font.get_string_size(field_text, HORIZONTAL_ALIGNMENT_LEFT, -1, field_px).x
+	if race.new_best:
+		time_text_w = font.get_string_size(time_main, HORIZONTAL_ALIGNMENT_LEFT, -1, time_px).x + 4.0 * s + font.get_string_size(time_cents, HORIZONTAL_ALIGNMENT_LEFT, -1, cents_px).x
+
+	var place_col := 0.0
+	var time_col := 0.0
+	if show_place:
+		place_col = maxf(badge, place_text_w)
+	if race.new_best:
+		time_col = maxf(badge, time_text_w)
+	var col_gap := 64.0 * s
+	var stats_w := place_col + time_col
+	if show_place and race.new_best:
+		stats_w += col_gap
+	var label_h := 0.0
+	if show_place:
+		label_h = font.get_ascent(place_px) + font.get_descent(place_px)
+	if race.new_best:
+		label_h = maxf(label_h, font.get_ascent(time_px) + font.get_descent(time_px))
+	var below := 26.0 * s
+	var stats_h := 0.0
+	if label_h > 0.0:
+		stats_h = badge + below + label_h
+	var block_gap := 26.0 * s if stats_h > 0.0 else 0.0
+	var block_h := title_h + block_gap + stats_h
+	var top := size.y * 0.42 - block_h * 0.5
+
+	var title_base := top + font.get_ascent(title_px)
+	var title_x := (size.x - title_row) * 0.5
+	var title_mid := title_base - (font.get_ascent(title_px) - font.get_descent(title_px)) * 0.5
+	var title_alpha := begin_pop(Vector2(size.x * 0.5, title_mid), finish_title, s)
+	if title_alpha > 0.0:
+		draw_icon(ICON_FLAG, Rect2(Vector2(title_x, title_mid - flag * 0.5), Vector2(flag, flag)), GOLD, s, title_alpha)
+		outlined(Vector2(title_x + flag + title_gap, title_base), title, title_size, s, TEXT_COLOR, title_alpha)
+		end_pop()
+
+	if stats_h == 0.0:
+		return
+
+	var badge_y := top + title_h + block_gap
+	var label_mid := badge_y + badge + below + label_h * 0.5
+	var x := (size.x - stats_w) * 0.5
+	if show_place:
+		var place_alpha := begin_pop(Vector2(x + place_col * 0.5, badge_y + stats_h * 0.5), finish_place, s)
+		if place_alpha > 0.0:
+			var badge_x := x + (place_col - badge) * 0.5
+			draw_icon(ICON_MEDAL, Rect2(Vector2(badge_x, badge_y), Vector2(badge, badge)), place_color, s, place_alpha)
+			if race.new_place:
+				var pip := 34.0 * s
+				draw_icon(ICON_STAR, Rect2(Vector2(badge_x + badge - pip * 0.72, badge_y - pip * 0.22), Vector2(pip, pip)), GOLD, s, place_alpha)
+			var main_w := font.get_string_size(place_text, HORIZONTAL_ALIGNMENT_LEFT, -1, place_px).x
+			var field_w := font.get_string_size(field_text, HORIZONTAL_ALIGNMENT_LEFT, -1, field_px).x
+			var run := main_w + text_gap + field_w
+			var text_x := x + (place_col - run) * 0.5
+			var main_base := label_mid + (font.get_ascent(place_px) - font.get_descent(place_px)) * 0.5
+			outlined(Vector2(text_x, main_base), place_text, 50, s, place_color, place_alpha)
+			var field_color := place_color
+			if not race.new_place:
+				field_color.a = 0.72
+			outlined(Vector2(text_x + main_w + text_gap, main_base), field_text, 26, s, field_color, place_alpha)
+			end_pop()
+		x += place_col
+		if race.new_best:
+			var div_x := x + col_gap * 0.5
+			var line_alpha := clampf((finish_mark - 0.05) / 0.3, 0.0, 1.0)
+			draw_line(Vector2(div_x, badge_y + 8.0 * s), Vector2(div_x, badge_y + stats_h - 4.0 * s), Color(1, 1, 1, 0.28 * line_alpha), maxf(2.0, 2.0 * s))
+			x += col_gap
+	if race.new_best:
+		var mark_alpha := begin_pop(Vector2(x + time_col * 0.5, badge_y + stats_h * 0.5), finish_mark, s)
+		if mark_alpha > 0.0:
+			var badge_x := x + (time_col - badge) * 0.5
+			draw_icon(ICON_TROPHY, Rect2(Vector2(badge_x, badge_y), Vector2(badge, badge)), GOLD, s, mark_alpha)
+			var main_w := font.get_string_size(time_main, HORIZONTAL_ALIGNMENT_LEFT, -1, time_px).x
+			var cents_w := font.get_string_size(time_cents, HORIZONTAL_ALIGNMENT_LEFT, -1, cents_px).x
+			var run := main_w + 4.0 * s + cents_w
+			var text_x := x + (time_col - run) * 0.5
+			var main_base := label_mid + (font.get_ascent(time_px) - font.get_descent(time_px)) * 0.5
+			outlined(Vector2(text_x, main_base), time_main, 46, s, GOLD, mark_alpha)
+			outlined(Vector2(text_x + main_w + 4.0 * s, main_base - 46.0 * 0.42 * s), time_cents, 23, s, GOLD, mark_alpha)
+			end_pop()
+
+
+func begin_pop(center: Vector2, scale: float, s: float) -> float:
+	if scale <= 0.05:
+		return 0.0
+	var drop := (1.0 - minf(scale, 1.0)) * 36.0 * s
+	draw_set_transform(center * (1.0 - scale) + Vector2(0.0, drop), 0.0, Vector2(scale, scale))
+	return clampf((scale - 0.05) / 0.3, 0.0, 1.0)
+
+
+func end_pop() -> void:
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func draw_icon(texture: Texture2D, rect: Rect2, color: Color, s: float, alpha := 1.0) -> void:
+	if alpha <= 0.0:
+		return
+	var center := rect.get_center()
+	var radius := rect.size.x * 0.52
+	draw_circle(center + SHADOW * s, radius, Color(0.0, 0.0, 0.0, 0.45 * alpha))
+	draw_circle(center, radius, Color(0.07, 0.02, 0.04, 0.84 * alpha))
+	draw_arc(center, radius, 0.0, TAU, 48, Color(color.r, color.g, color.b, 0.95 * alpha), maxf(2.5, 3.0 * s), true)
+	var previous := texture_filter
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	draw_texture_rect(texture, rect, false, Color(color.r, color.g, color.b, alpha))
+	texture_filter = previous
 
 
 func draw_lap_and_place(me: int, s: float) -> void:
