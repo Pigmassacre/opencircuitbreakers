@@ -361,6 +361,25 @@ static func choice_row(column: VBoxContainer, title: String, items: Array, selec
 	return button
 
 
+static func lock_focus(controls: Array) -> void:
+	var shown: Array[Control] = []
+	for item in controls:
+		var control := item as Control
+		if control.visible:
+			shown.append(control)
+	for i in shown.size():
+		var current := shown[i]
+		var previous := shown[(i + shown.size() - 1) % shown.size()]
+		var next := shown[(i + 1) % shown.size()]
+		var here := current.get_path()
+		current.focus_neighbor_left = previous.get_path()
+		current.focus_neighbor_right = next.get_path()
+		current.focus_neighbor_top = here
+		current.focus_neighbor_bottom = here
+		current.focus_next = next.get_path()
+		current.focus_previous = previous.get_path()
+
+
 static func hook_button(button: Button) -> void:
 	button.resized.connect(func() -> void: button.pivot_offset = button.size * 0.5)
 	button.mouse_entered.connect(func() -> void: pop(button, 1.05))

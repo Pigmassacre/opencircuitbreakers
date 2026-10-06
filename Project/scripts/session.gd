@@ -48,7 +48,9 @@ var pause_ask: Control
 var pause_ask_title: Label
 var pause_ask_body: Label
 var pause_ask_yes: Button
+var pause_ask_cancel: Button
 var pause_ask_action: Callable
+var pause_ask_return: Control
 var race_hold := 0.0
 var race_returning := false
 var best_noted := false
@@ -610,7 +612,8 @@ func build_pause_ask(parent: Control) -> void:
 	row.add_theme_constant_override("separation", 16)
 	column.add_child(row)
 	pause_ask_yes = ask_button(row, "Return", accept_pause_ask)
-	ask_button(row, "Cancel", close_pause_ask)
+	pause_ask_cancel = ask_button(row, "Cancel", close_pause_ask)
+	UiTheme.lock_focus([pause_ask_yes, pause_ask_cancel])
 
 
 func ask_button(row: HBoxContainer, text: String, action: Callable) -> Button:
@@ -657,13 +660,14 @@ func open_pause_ask(title: String, body: String, yes: String, action: Callable) 
 	pause_ask_body.text = body
 	pause_ask_yes.text = yes
 	pause_ask_action = action
+	pause_ask_return = get_viewport().gui_get_focus_owner()
 	pause_ask.visible = true
-	pause_ask_yes.grab_focus()
+	pause_ask_cancel.grab_focus()
 
 
 func close_pause_ask() -> void:
 	pause_ask.visible = false
-	resume.grab_focus()
+	pause_ask_return.grab_focus()
 
 
 func accept_pause_ask() -> void:

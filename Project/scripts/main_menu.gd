@@ -178,6 +178,8 @@ var header_chrome: Control
 var header_settings: HBoxContainer
 var quit_ask: Control
 var quit_ask_yes: Button
+var quit_ask_cancel: Button
+var quit_return: Control
 
 
 func _ready() -> void:
@@ -384,16 +386,16 @@ func build_quit_ask() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	column.add_child(row)
-	var cancel := Button.new()
-	cancel.text = "Cancel"
-	cancel.custom_minimum_size = Vector2(180, 64)
-	cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cancel.add_theme_font_size_override("font_size", 24)
-	cancel.pressed.connect(func() -> void:
+	quit_ask_cancel = Button.new()
+	quit_ask_cancel.text = "Cancel"
+	quit_ask_cancel.custom_minimum_size = Vector2(180, 64)
+	quit_ask_cancel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	quit_ask_cancel.add_theme_font_size_override("font_size", 24)
+	quit_ask_cancel.pressed.connect(func() -> void:
 		Sound.ui()
 		close_quit_ask()
 	)
-	UiTheme.hook_button(cancel)
+	UiTheme.hook_button(quit_ask_cancel)
 	quit_ask_yes = Button.new()
 	quit_ask_yes.text = "Quit"
 	quit_ask_yes.custom_minimum_size = Vector2(180, 64)
@@ -405,17 +407,20 @@ func build_quit_ask() -> void:
 	)
 	UiTheme.hook_button(quit_ask_yes)
 	row.add_child(quit_ask_yes)
-	row.add_child(cancel)
+	row.add_child(quit_ask_cancel)
+	UiTheme.lock_focus([quit_ask_yes, quit_ask_cancel])
 
 
 func prompt_quit() -> void:
+	quit_return = get_viewport().gui_get_focus_owner()
 	quit_ask.visible = true
 	quit_ask.move_to_front()
-	quit_ask_yes.grab_focus()
+	quit_ask_cancel.grab_focus()
 
 
 func close_quit_ask() -> void:
 	quit_ask.visible = false
+	quit_return.grab_focus()
 
 
 func layout_flag() -> void:

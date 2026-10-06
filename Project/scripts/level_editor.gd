@@ -93,6 +93,7 @@ var pending_action := ""
 var confirm_title: Label
 var confirm_ok: Button
 var confirm_extra: Button
+var confirm_cancel: Button
 var confirm_kind := ""
 var confirm_ok_action: Callable = func() -> void: pass
 var confirm_extra_action: Callable = func() -> void: pass
@@ -3354,10 +3355,12 @@ func accept_tileset() -> void:
 
 func show_confirm() -> void:
 	confirm.visible = true
+	var buttons: Array[Button] = [confirm_ok]
 	if confirm_extra.visible:
-		confirm_extra.grab_focus()
-	else:
-		confirm_ok.grab_focus()
+		buttons.append(confirm_extra)
+	buttons.append(confirm_cancel)
+	UiTheme.lock_focus(buttons)
+	confirm_cancel.grab_focus()
 
 
 func accept_confirm() -> void:
@@ -3643,7 +3646,7 @@ func build_confirm(root: Control) -> void:
 	confirm_extra.add_theme_stylebox_override("focus", selected_style)
 	confirm_extra.pressed.connect(extra_confirm)
 	row.add_child(confirm_extra)
-	bar_button(row, "Cancel", cancel_confirm, true)
+	confirm_cancel = bar_button(row, "Cancel", cancel_confirm, true)
 
 
 func build_pause(root: Control) -> void:
