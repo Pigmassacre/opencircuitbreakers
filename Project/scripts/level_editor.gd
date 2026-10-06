@@ -245,7 +245,7 @@ func _process(delta: float) -> void:
 	if not typing():
 		poll_pan(delta)
 		if not right_down and not middle_down and not over_ui():
-			aim_cursor(get_viewport().get_mouse_position())
+			aim_cursor(Settings.mouse_position())
 		if left_down and not over_ui():
 			stroke_drag()
 	var fine := editor_tool == TOOL_ROAD and road_snap and tileset_grid() <= 1
@@ -837,7 +837,7 @@ func store_camera(index: int, cam: Array) -> void:
 
 
 func grab_camera() -> void:
-	var index := nearest_node(get_viewport().get_mouse_position())
+	var index := nearest_node(Settings.mouse_position())
 	if index < 0:
 		camera_node = -1
 		camera_drag = false
@@ -851,14 +851,14 @@ func grab_camera() -> void:
 		store_camera(index, cam)
 	camera_pitch0 = LevelBuild.pitch_step(int(cam[2]))
 	camera_dist0 = int(cam[3])
-	camera_press = get_viewport().get_mouse_position()
+	camera_press = Settings.mouse_position()
 	camera_drag = true
 
 
 func slide_camera() -> void:
 	if not camera_drag or camera_node < 0 or camera_node >= level.line.size():
 		return
-	var delta := get_viewport().get_mouse_position() - camera_press
+	var delta := Settings.mouse_position() - camera_press
 	if delta.length() < 8.0:
 		return
 	var pitch := clampi(camera_pitch0 - int(delta.y / 12.0), -63, 63)
@@ -929,7 +929,7 @@ func cycle_camera_type() -> void:
 
 
 func paint_lap() -> void:
-	var index := part_under_mouse(get_viewport().get_mouse_position())
+	var index := part_under_mouse(Settings.mouse_position())
 	if index == lap_painted:
 		return
 	lap_painted = index
@@ -1195,7 +1195,7 @@ func cycle_grid() -> void:
 
 func part_at_cursor() -> int:
 	if stacks():
-		var hit := part_under_mouse(get_viewport().get_mouse_position())
+		var hit := part_under_mouse(Settings.mouse_position())
 		if hit >= 0:
 			return hit
 		var found := -1
@@ -1270,22 +1270,22 @@ func stroke_down() -> void:
 	press_moved = false
 	if editor_tool == TOOL_ROAD and ctrl_down() and not shift_down():
 		left_down = false
-		var picked := nearest_node(get_viewport().get_mouse_position())
+		var picked := nearest_node(Settings.mouse_position())
 		if picked > 0:
 			set_start(picked)
 		return
 	if editor_tool == TOOL_ROAD and shift_down():
 		erased = FAR_CELL
 		erase_at_cursor()
-	elif editor_tool == TOOL_ROAD and pick_span(get_viewport().get_mouse_position()).x >= 0:
-		var span := pick_span(get_viewport().get_mouse_position())
+	elif editor_tool == TOOL_ROAD and pick_span(Settings.mouse_position()).x >= 0:
+		var span := pick_span(Settings.mouse_position())
 		span_node = span.x
 		span_end = span.y
 		span_hover = span
 		node_held = true
-		node_press = get_viewport().get_mouse_position()
-	elif editor_tool == TOOL_ROAD and nearest_node(get_viewport().get_mouse_position()) >= 0:
-		var index := nearest_node(get_viewport().get_mouse_position())
+		node_press = Settings.mouse_position()
+	elif editor_tool == TOOL_ROAD and nearest_node(Settings.mouse_position()) >= 0:
+		var index := nearest_node(Settings.mouse_position())
 		if gap_before(index) and can_mend(index):
 			var filling := place_from + 1 == index
 			mend_gap(index)
@@ -1298,7 +1298,7 @@ func stroke_down() -> void:
 			hover_node = index
 			press_node = index
 			node_held = true
-			node_press = get_viewport().get_mouse_position()
+			node_press = Settings.mouse_position()
 	elif wants_pick():
 		picked_part = -1
 		sample_tile()
@@ -1318,7 +1318,7 @@ func stroke_down() -> void:
 
 
 func stroke_drag() -> void:
-	if node_held and get_viewport().get_mouse_position().distance_to(node_press) < 20.0:
+	if node_held and Settings.mouse_position().distance_to(node_press) < 20.0:
 		return
 	if node_held:
 		press_moved = true
@@ -1348,7 +1348,7 @@ func stroke_drag() -> void:
 
 
 func sample_tile() -> void:
-	var index := part_under_mouse(get_viewport().get_mouse_position())
+	var index := part_under_mouse(Settings.mouse_position())
 	if index < 0 or index == picked_part:
 		return
 	picked_part = index
@@ -1456,7 +1456,7 @@ func extend_road() -> void:
 
 
 func cut_road() -> void:
-	var index := nearest_node(get_viewport().get_mouse_position())
+	var index := nearest_node(Settings.mouse_position())
 	if index < 0:
 		return
 	var sample: Dictionary = level.line[index]
@@ -1549,7 +1549,7 @@ func slide_span() -> void:
 		return
 	var sample: Dictionary = level.line[span_node]
 	var height := LevelBuild.metres(float(sample.y)) + 0.35
-	var hit: Variant = Plane(Vector3.UP, height).intersects_ray(view.project_ray_origin(get_viewport().get_mouse_position()), view.project_ray_normal(get_viewport().get_mouse_position()))
+	var hit: Variant = Plane(Vector3.UP, height).intersects_ray(view.project_ray_origin(Settings.mouse_position()), view.project_ray_normal(Settings.mouse_position()))
 	if hit == null:
 		return
 	var point: Vector3 = hit
@@ -2728,7 +2728,7 @@ func rebuild_road_cursor() -> void:
 	var point := road_at
 	var show := road_ok and hover_node < 0 and bool(level.joined)
 	if erasing():
-		var index := nearest_node(get_viewport().get_mouse_position())
+		var index := nearest_node(Settings.mouse_position())
 		if index >= 0:
 			var sample: Dictionary = level.line[index]
 			point = Vector3(LevelBuild.metres(float(sample.x)), LevelBuild.metres(float(sample.y)), LevelBuild.metres(float(sample.z)))

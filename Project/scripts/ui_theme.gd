@@ -247,6 +247,10 @@ static func fill_options(column: VBoxContainer) -> HSlider:
 		if sizes[i] == Settings.resolution:
 			selected = i
 	choice_row(column, "Resolution", labels, selected, func(index: int) -> void: Settings.set_resolution(sizes[index]))
+	var crt := choice_row(column, "CRT Filter", ["Off", "On"], int(Settings.crt), func(index: int) -> void: Settings.set_crt(index == 1))
+	var curve_row := volume_row(column, "Curvature", Settings.crt_curve, Settings.set_crt_curve).get_parent() as Control
+	curve_row.visible = Settings.crt
+	crt.item_selected.connect(func(index: int) -> void: curve_row.visible = index == 1)
 	return focus
 
 
