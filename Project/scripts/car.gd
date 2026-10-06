@@ -203,8 +203,10 @@ var collision_shape: CollisionShape3D
 var collision_offset: Transform3D
 var wheel_travel := 0.0
 var steer_pivots: Array[Node3D] = []
+var steer_sign: Array[float] = []
 var wheel_spinners: Array[Node3D] = []
 var wheel_radii: Array[float] = []
+var wheel_spin_z: Array[bool] = []
 
 
 func _ready() -> void:
@@ -321,11 +323,17 @@ func build_body() -> void:
 		spinner.mesh = meshes[int(wheel.model)]
 		pivot.add_child(spinner)
 		var flags := int(wheel.flags)
+		# FUN_00022ec8. Case 3 yaws with the steer angle; case 2 (submarine
+		# flaps) yaws with its negation. Boats never accumulate that angle.
+		# Cases 3 and 7 spin about Z, which is the Godot X axle. Case 0x70
+		# spins a propeller about X, which is Godot Z.
 		if flags == 3 or (flags == 2 and vehicle_kind == VEHICLE_SUB):
 			steer_pivots.append(pivot)
+			steer_sign.append(-1.0 if flags == 2 else 1.0)
 		if flags != 2:
 			wheel_spinners.append(spinner)
 			wheel_radii.append(wheel.radius)
+			wheel_spin_z.append(flags == 0x70)
 
 
 func add_surface(mesh: ArrayMesh, floats: PackedFloat32Array, count: int, material: Material) -> Array:
@@ -1472,11 +1480,15 @@ func apply_puppet(xform: Transform3D, next_vel: Vector3, next_heading: int, lean
 
 func update_wheels() -> void:
 	var steer_angle := -steer_input / 7.0 * MAX_STEER_ANGLE
-	for pivot in steer_pivots:
-		pivot.rotation.y = steer_angle
+	for i in steer_pivots.size():
+		steer_pivots[i].rotation.y = steer_angle * steer_sign[i]
 	wheel_travel += vel.dot(ground_forward()) * FIXED_TO_MPS / Engine.physics_ticks_per_second
 	for i in wheel_spinners.size():
-		wheel_spinners[i].rotation.x = -wheel_travel / wheel_radii[i]
+		var spin := -wheel_travel / wheel_radii[i]
+		if wheel_spin_z[i]:
+			wheel_spinners[i].rotation.z = spin
+		else:
+			wheel_spinners[i].rotation.x = spin
 
 
 func speed_kmh() -> float:
