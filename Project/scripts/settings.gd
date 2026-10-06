@@ -6,6 +6,7 @@ const BUS_SFX := "SFX"
 
 enum Mode { WINDOWED, BORDERLESS, FULLSCREEN }
 enum Fog { FAR, ORIGINAL }
+enum Filter { OFF, BILINEAR }
 
 const CRT_CURVE_MAX := 0.15
 const DEVICE_ID_INTERNAL := -2
@@ -52,6 +53,7 @@ var sfx := 100
 var window_mode := Mode.WINDOWED
 var resolution := Vector2i(1920, 1080)
 var fog := Fog.FAR
+var texture_filter := Filter.OFF
 var crt := false
 var crt_curve := 0
 var crt_rect: ColorRect
@@ -76,6 +78,7 @@ func _ready() -> void:
 		sfx = clampi(int(config.get_value("audio", "sfx", sfx)), 0, 100)
 		window_mode = clampi(int(config.get_value("display", "window", window_mode)), 0, Mode.FULLSCREEN)
 		fog = clampi(int(config.get_value("display", "fog", fog)), 0, Fog.ORIGINAL)
+		texture_filter = clampi(int(config.get_value("display", "texture_filter", texture_filter)), 0, Filter.BILINEAR)
 		crt = bool(config.get_value("display", "crt", crt))
 		crt_curve = clampi(int(config.get_value("display", "crt_curve", crt_curve)), 0, 100)
 		if config.has_section_key("display", "width") and config.has_section_key("display", "height"):
@@ -202,6 +205,18 @@ func set_window_mode(mode: int) -> void:
 func set_fog(mode: int) -> void:
 	fog = mode
 	save()
+
+
+func set_texture_filter(mode: int) -> void:
+	texture_filter = mode
+	for node in get_tree().get_nodes_in_group(Track.TEXTURED):
+		for material: BaseMaterial3D in node.textured:
+			material.texture_filter = material_filter()
+	save()
+
+
+func material_filter() -> BaseMaterial3D.TextureFilter:
+	return BaseMaterial3D.TEXTURE_FILTER_LINEAR if texture_filter == Filter.BILINEAR else BaseMaterial3D.TEXTURE_FILTER_NEAREST
 
 
 func set_crt(on: bool) -> void:
@@ -358,6 +373,7 @@ func save() -> void:
 	config.set_value("display", "width", resolution.x)
 	config.set_value("display", "height", resolution.y)
 	config.set_value("display", "fog", fog)
+	config.set_value("display", "texture_filter", texture_filter)
 	config.set_value("display", "crt", crt)
 	config.set_value("display", "crt_curve", crt_curve)
 	for scene in best_times:

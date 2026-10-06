@@ -235,6 +235,37 @@ static func add_heading(column: VBoxContainer, title: String, size: int) -> void
 	block.add_child(rule)
 
 
+static func options_scroll(column: Container) -> ScrollContainer:
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.follow_focus = true
+	column.add_child(scroll)
+	var margin := MarginContainer.new()
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(margin)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 22)
+	stack.custom_minimum_size = Vector2(OPTIONS_W, 0)
+	margin.add_child(stack)
+	return scroll
+
+
+static func options_stack(scroll: ScrollContainer) -> VBoxContainer:
+	return scroll.get_child(0).get_child(0)
+
+
+# Grows the scroll to its content, but no taller than the panel fits in height.
+static func fit_scroll(scroll: ScrollContainer, panel: Control, height: float) -> void:
+	var margin := scroll.get_child(0) as MarginContainer
+	var content := options_stack(scroll).get_combined_minimum_size().y
+	var room := height - (panel.size.y - scroll.size.y)
+	var bar := 0
+	if room < content:
+		bar = int(scroll.get_v_scroll_bar().get_combined_minimum_size().x) + 12
+	margin.add_theme_constant_override("margin_right", bar)
+	scroll.custom_minimum_size.y = clampf(room, 0.0, content)
+
+
 static func fill_options(column: VBoxContainer) -> HSlider:
 	section_header(column, "Audio")
 	var focus := volume_row(column, "Master", Settings.master, Settings.set_master)
@@ -256,6 +287,7 @@ static func fill_options(column: VBoxContainer) -> HSlider:
 			selected = i
 	choice_row(column, "Resolution", labels, selected, func(index: int) -> void: Settings.set_resolution(sizes[index]))
 	choice_row(column, "Distance Fog", ["Far", "Original"], Settings.fog, Settings.set_fog)
+	choice_row(column, "Texture Filter", ["Off", "Bilinear"], Settings.texture_filter, Settings.set_texture_filter)
 	var crt := choice_row(column, "CRT Filter", ["Off", "On"], int(Settings.crt), func(index: int) -> void: Settings.set_crt(index == 1))
 	var curve_row := volume_row(column, "Curvature", Settings.crt_curve, Settings.set_crt_curve).get_parent() as Control
 	curve_row.visible = Settings.crt
@@ -287,6 +319,7 @@ static func volume_row(column: VBoxContainer, title: String, value: int, apply: 
 	slider.max_value = 100
 	slider.step = 1
 	slider.value = value
+	slider.scrollable = false
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slider.custom_minimum_size = Vector2(360, 32)
 	var amount := Label.new()

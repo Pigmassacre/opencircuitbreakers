@@ -70,6 +70,8 @@ var options_page: VBoxContainer
 var credits_page: VBoxContainer
 var credits_scroll: ScrollContainer
 var options_focus: Control
+var options_frame: PanelContainer
+var options_scroll: ScrollContainer
 var page: VBoxContainer
 var multiplayer_page: VBoxContainer
 var online_page: VBoxContainer
@@ -251,6 +253,8 @@ func _process(delta: float) -> void:
 	if setup_job != null:
 		poll_setup()
 		return
+	if page == options_page:
+		UiTheme.fit_scroll(options_scroll, options_frame, options_page.size.y - CREDITS_MARGIN * 2.0)
 	if page == credits_page:
 		var scroll := Input.get_axis("ui_up", "ui_down")
 		if scroll == 0.0:
@@ -2847,17 +2851,18 @@ func menu_icon(icon_name: String) -> Texture2D:
 
 
 func build_options(column: VBoxContainer) -> void:
-	var stack := VBoxContainer.new()
-	stack.alignment = BoxContainer.ALIGNMENT_CENTER
-	stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	stack.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	stack.custom_minimum_size = Vector2(UiTheme.OPTIONS_W, 0)
-	stack.add_theme_constant_override("separation", 22)
-	column.add_child(stack)
+	options_frame = PanelContainer.new()
+	options_frame.add_theme_stylebox_override("panel", UiTheme.shell_style())
+	options_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	options_frame.size_flags_vertical = Control.SIZE_EXPAND | Control.SIZE_SHRINK_CENTER
+	column.add_child(options_frame)
+	options_scroll = UiTheme.options_scroll(options_frame)
+	var stack := UiTheme.options_stack(options_scroll)
 	options_focus = UiTheme.fill_options(stack)
 	add_gap(stack, 14.0)
 	add_button(stack, "Setup", func() -> void: open_setup(options_page))
 	add_button(stack, "Credits", show_page.bind(credits_page))
+	add_gap(stack, 0.0)
 	add_nav(column, "Back", show_page.bind(main_page), false)
 
 

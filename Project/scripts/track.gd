@@ -8,6 +8,7 @@ extends Node3D
 
 const VERTEX_FLOATS := 12
 const LOST_DISTANCE := 40.0
+const TEXTURED := "textured"
 
 var nodes: Array = []
 var node_grid: Dictionary
@@ -43,6 +44,7 @@ var ai_race := false
 var ai_start := PackedInt32Array([0, 0])
 var gate_fraction := 0
 var edge_fraction := 0
+var textured: Array[StandardMaterial3D] = []
 var body: StaticBody3D
 
 
@@ -115,6 +117,8 @@ func load_from(dir: String, collide := true) -> void:
 			flip_image = Image.new()
 			flip_image.load_png_from_buffer(read_bytes(dir + "/flip.png"))
 	var materials: Array[StandardMaterial3D] = [track_material(atlas, BaseMaterial3D.CULL_BACK), track_material(atlas, BaseMaterial3D.CULL_DISABLED)]
+	textured = materials
+	add_to_group(TEXTURED)
 	var bytes := read_bytes(dir + "/mesh.bin")
 	var mesh := ArrayMesh.new()
 	var faces := PackedVector3Array()
@@ -347,7 +351,7 @@ func track_material(atlas: Texture2D, cull: BaseMaterial3D.CullMode) -> Standard
 	var material := StandardMaterial3D.new()
 	material.albedo_texture = atlas
 	material.vertex_color_use_as_albedo = true
-	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST if Engine.is_editor_hint() else Settings.material_filter()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	material.alpha_scissor_threshold = 0.5
 	material.cull_mode = cull

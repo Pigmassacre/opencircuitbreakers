@@ -194,6 +194,7 @@ var visual := Node3D.new()
 var body := MeshInstance3D.new()
 var body_surfaces: Array = []
 var body_materials: Array[StandardMaterial3D] = []
+var textured: Array[StandardMaterial3D] = []
 var color := Color.WHITE
 var ground_offset := 0.0
 var safe_transform: Transform3D
@@ -290,6 +291,8 @@ func build_body() -> void:
 	atlas_image.load_png_from_buffer(Data.bytes(dir + "/atlas.png"))
 	var atlas: Texture2D = ImageTexture.create_from_image(atlas_image)
 	body_materials = [car_material(atlas, BaseMaterial3D.CULL_BACK), car_material(atlas, BaseMaterial3D.CULL_DISABLED)]
+	textured = body_materials
+	add_to_group(Track.TEXTURED)
 	ground_offset = info.ground
 	var bytes := Data.bytes(dir + "/mesh.bin")
 	var offset := 0
@@ -355,7 +358,7 @@ func car_material(atlas: Texture2D, cull: BaseMaterial3D.CullMode) -> StandardMa
 	var material := StandardMaterial3D.new()
 	material.albedo_texture = atlas
 	material.vertex_color_use_as_albedo = true
-	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	material.texture_filter = Settings.material_filter()
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	material.alpha_scissor_threshold = 0.5
 	material.cull_mode = cull

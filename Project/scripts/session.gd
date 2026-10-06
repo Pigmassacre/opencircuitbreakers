@@ -8,6 +8,7 @@ const WORLDS := ["wild_west", "grand_prix", "venice", "swamp", "jungle", "persia
 const GRID := 8
 const FAR_FOG_DENSITY := 0.003
 const FAR_CLIP := 4000.0
+const PAUSE_MARGIN := 32.0
 static var queued_dir := ""
 # FUN_0006ad00 fills the mode corridor with World Series and Time Trial for one
 # player, and Battle and Time Trial when more than one is waiting. Time trial
@@ -38,6 +39,7 @@ var battle: Battle
 var pause_menu: Control
 var pause_options: Control
 var pause_options_focus: Control
+var pause_scroll: ScrollContainer
 var pause_dim: ColorRect
 var pause_shell: PanelContainer
 var pause_column: VBoxContainer
@@ -190,6 +192,8 @@ func _process(_delta: float) -> void:
 	if Engine.is_editor_hint():
 		return
 	apply_fog(get_viewport().get_camera_3d())
+	if pause_options.visible:
+		UiTheme.fit_scroll(pause_scroll, pause_options, get_viewport().get_visible_rect().size.y - PAUSE_MARGIN * 2.0)
 	if rematch.visible:
 		poll_rematch()
 		return
@@ -520,11 +524,8 @@ func build_pause_options(parent: Node) -> void:
 	column.add_theme_constant_override("separation", 18)
 	pause_options.add_child(column)
 	UiTheme.add_heading(column, "Options", 48)
-	var stack := VBoxContainer.new()
-	stack.add_theme_constant_override("separation", 22)
-	stack.custom_minimum_size = Vector2(UiTheme.OPTIONS_W, 0)
-	column.add_child(stack)
-	pause_options_focus = UiTheme.fill_options(stack)
+	pause_scroll = UiTheme.options_scroll(column)
+	pause_options_focus = UiTheme.fill_options(UiTheme.options_stack(pause_scroll))
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 22)
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
