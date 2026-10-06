@@ -17,6 +17,17 @@ for key in file_version product_version; do
 	fi
 done
 tag="v$version"
+if [[ $# -eq 1 ]]; then
+	changes="$(awk -v heading="## $version " '
+		index($0, heading) == 1 { found = 1; next }
+		found && /^## / { exit }
+		found { print }
+	' "$root/CHANGELOG.md")"
+	if [[ -z "${changes//[[:space:]]/}" ]]; then
+		echo "CHANGELOG.md has no entry for $version" >&2
+		exit 1
+	fi
+fi
 "$root/Tools/package.sh"
 linux_zip="$root/Builds/OpenCircuitBreakers-linux-x86_64.zip"
 windows_zip="$root/Builds/OpenCircuitBreakers-windows-x86_64.zip"
@@ -36,8 +47,10 @@ if [[ $# -eq 0 ]]; then
 fi
 gh release create "$tag" "$linux_zip" "$windows_zip" \
 	--title "$tag" \
-	--generate-notes \
+	--verify-tag \
 	--notes "$(cat <<EOF
+$changes
+
 Linux and Windows builds of OpenCircuitBreakers.
 
 The download does not include any Circuit Breakers data. On first launch, point the setup screen at your own copy of the game (select the .cue file so the music is extracted too). An optional demo add-on disc adds Castle and Rooftop.
