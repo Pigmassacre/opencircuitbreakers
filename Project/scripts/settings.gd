@@ -13,11 +13,27 @@ const DEVICE_ID_INTERNAL := -2
 
 const RESOLUTIONS: Array[Vector2i] = [
 	Vector2i(1280, 720),
+	Vector2i(1280, 800),
 	Vector2i(1366, 768),
+	Vector2i(1440, 900),
 	Vector2i(1600, 900),
+	Vector2i(1680, 1050),
 	Vector2i(1920, 1080),
+	Vector2i(1920, 1200),
 	Vector2i(2560, 1440),
+	Vector2i(2560, 1600),
 	Vector2i(3840, 2160),
+]
+
+const ASPECTS: Array[Vector2i] = [
+	Vector2i(16, 9),
+	Vector2i(16, 10),
+	Vector2i(4, 3),
+	Vector2i(5, 4),
+	Vector2i(3, 2),
+	Vector2i(5, 3),
+	Vector2i(21, 9),
+	Vector2i(32, 9),
 ]
 
 const CRT_SHADER := "shader_type canvas_item;
@@ -263,14 +279,33 @@ func resolutions() -> Array[Vector2i]:
 	var screen := DisplayServer.screen_get_size()
 	var list: Array[Vector2i] = []
 	for size in RESOLUTIONS:
-		if screen.x < 1 or (size.x <= screen.x and size.y <= screen.y):
-			list.append(size)
+		list.append(size)
 	if screen.x > 0 and list.find(screen) == -1:
 		list.append(screen)
 	if list.find(resolution) == -1:
 		list.append(resolution)
 	list.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x or (a.x == b.x and a.y < b.y))
 	return list
+
+
+static func aspect_name(size: Vector2i) -> String:
+	var ratio := float(size.x) / float(size.y)
+	var best := Vector2i.ZERO
+	var error := 0.02
+	for aspect in ASPECTS:
+		var next := absf(ratio - float(aspect.x) / float(aspect.y))
+		if next < error:
+			error = next
+			best = aspect
+	if best.x > 0:
+		return "%d:%d" % [best.x, best.y]
+	var a := size.x
+	var b := size.y
+	while b != 0:
+		var next := a % b
+		a = b
+		b = next
+	return "%d:%d" % [size.x / a, size.y / a]
 
 
 func apply_volumes() -> void:

@@ -9,6 +9,8 @@ const CORAL := Color(0.93, 0.4, 0.26)
 const LIP := Color(0.4, 0.05, 0.18)
 const OPTIONS_W := 700.0
 const OPTION_LABEL_W := 220.0
+const RATIO := Color(0.78, 0.74, 0.76)
+const RATIO_HOT := Color(0.45, 0.34, 0.36)
 
 
 static func font() -> Font:
@@ -279,13 +281,11 @@ static func fill_options(column: VBoxContainer) -> HSlider:
 	var mode := choice_row(column, "Window", ["Windowed", "Borderless", "Fullscreen"], Settings.window_mode, Settings.set_window_mode)
 	Settings.window_mode_changed.connect(func() -> void: mode.select(Settings.window_mode))
 	var sizes := Settings.resolutions()
-	var labels: Array[String] = []
 	var selected := 0
 	for i in sizes.size():
-		labels.append("%d x %d" % [sizes[i].x, sizes[i].y])
 		if sizes[i] == Settings.resolution:
 			selected = i
-	choice_row(column, "Resolution", labels, selected, func(index: int) -> void: Settings.set_resolution(sizes[index]))
+	resolution_row(column, sizes, selected, func(index: int) -> void: Settings.set_resolution(sizes[index]))
 	choice_row(column, "Distance Fog", ["Far", "Original"], Settings.fog, Settings.set_fog)
 	choice_row(column, "Texture Filter", ["Off", "Bilinear"], Settings.texture_filter, Settings.set_texture_filter)
 	var crt := choice_row(column, "CRT Filter", ["Off", "On"], int(Settings.crt), func(index: int) -> void: Settings.set_crt(index == 1))
@@ -359,6 +359,213 @@ static func choice_row(column: VBoxContainer, title: String, items: Array, selec
 	spacer.custom_minimum_size = Vector2(56, 0)
 	row.add_child(spacer)
 	return button
+
+
+static func resolution_row(column: VBoxContainer, sizes: Array[Vector2i], selected: int, apply: Callable) -> Button:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.size_flags_horizontal = Control.SIZE_FILL
+	column.add_child(row)
+	var name := Label.new()
+	name.text = "Resolution"
+	name.custom_minimum_size = Vector2(OPTION_LABEL_W, 0)
+	name.add_theme_font_size_override("font_size", 26)
+	row.add_child(name)
+	var button := Button.new()
+	button.focus_mode = Control.FOCUS_ALL
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_font_size_override("font_size", 26)
+	row.add_child(button)
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		var style := button.get_theme_stylebox(state).duplicate() as StyleBoxFlat
+		style.content_margin_right = 58
+		button.add_theme_stylebox_override(state, style)
+	var box := button.get_theme_stylebox("normal")
+	var origin := box.get_offset()
+	var chrome := box.get_minimum_size()
+	var text_h := button.get_theme_font("font").get_height(26)
+	button.custom_minimum_size = Vector2(360, maxf(48.0, text_h + chrome.y))
+	var face := HBoxContainer.new()
+	face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	face.alignment = BoxContainer.ALIGNMENT_CENTER
+	face.add_theme_constant_override("separation", 16)
+	face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	face.offset_left = origin.x
+	face.offset_top = origin.y
+	face.offset_right = -(chrome.x - origin.x)
+	face.offset_bottom = -(chrome.y - origin.y)
+	button.add_child(face)
+	var value := ratio_label(face, resolution_text(sizes[selected]), false)
+	var ratio := ratio_label(face, Settings.aspect_name(sizes[selected]), true)
+	var arrow := TextureRect.new()
+	arrow.texture = dropdown_arrow()
+	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arrow.set_anchors_and_offsets_preset(Control.PRESET_CENTER_RIGHT)
+	arrow.offset_left = -42
+	arrow.offset_right = -16
+	arrow.offset_top = -9
+	arrow.offset_bottom = 9
+	button.add_child(arrow)
+	button.set_meta("selected", selected)
+
+	var popup := PopupPanel.new()
+	var panel := panel_style(Color(0.14, 0.03, 0.08, 0.96), ACCENT)
+	panel.content_margin_left = 4
+	panel.content_margin_right = 4
+	panel.content_margin_top = 4
+	panel.content_margin_bottom = 4
+	popup.add_theme_stylebox_override("panel", panel)
+	popup.exclusive = true
+	button.add_child(popup)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	popup.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 2)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+
+	var entries: Array[Button] = []
+	var item_values: Array[Label] = []
+	var item_ratios: Array[Label] = []
+	for i in sizes.size():
+		var item := Button.new()
+		item.focus_mode = Control.FOCUS_ALL
+		item.custom_minimum_size.y = text_h + 12.0
+		item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var empty := StyleBoxEmpty.new()
+		var hot := panel_style(CREAM, CORAL)
+		hot.content_margin_left = 0
+		hot.content_margin_right = 0
+		hot.content_margin_top = 0
+		hot.content_margin_bottom = 0
+		item.add_theme_stylebox_override("normal", empty)
+		item.add_theme_stylebox_override("disabled", empty)
+		item.add_theme_stylebox_override("hover", hot)
+		item.add_theme_stylebox_override("pressed", hot)
+		item.add_theme_stylebox_override("hover_pressed", hot)
+		item.add_theme_stylebox_override("focus", hot)
+		var item_face := HBoxContainer.new()
+		item_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		item_face.alignment = BoxContainer.ALIGNMENT_CENTER
+		item_face.add_theme_constant_override("separation", 16)
+		item_face.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		item_face.offset_left = 12
+		item_face.offset_right = -12
+		item.add_child(item_face)
+		list.add_child(item)
+		entries.append(item)
+		item_values.append(ratio_label(item_face, resolution_text(sizes[i]), false))
+		item_ratios.append(ratio_label(item_face, Settings.aspect_name(sizes[i]), true))
+		var index := i
+		item.pressed.connect(func() -> void:
+			button.set_meta("selected", index)
+			value.text = resolution_text(sizes[index])
+			ratio.text = Settings.aspect_name(sizes[index])
+			popup.hide()
+			apply.call(index)
+			button.grab_focus()
+		)
+
+	for i in entries.size():
+		var item := entries[i]
+		var previous := entries[(i + entries.size() - 1) % entries.size()]
+		var next := entries[(i + 1) % entries.size()]
+		item.focus_neighbor_top = previous.get_path()
+		item.focus_neighbor_bottom = next.get_path()
+		item.focus_neighbor_left = item.get_path()
+		item.focus_neighbor_right = item.get_path()
+		item.focus_next = next.get_path()
+		item.focus_previous = previous.get_path()
+
+	var paint := func() -> void:
+		var button_hot := button.is_hovered() or button.has_focus() or button.button_pressed
+		paint_ratio_text(value, ratio, button_hot)
+		arrow.modulate = INK if button_hot else Color.WHITE
+		for n in entries.size():
+			paint_ratio_text(item_values[n], item_ratios[n], entries[n].is_hovered() or entries[n].has_focus())
+	button.mouse_entered.connect(paint)
+	button.mouse_exited.connect(paint)
+	button.focus_entered.connect(paint)
+	button.focus_exited.connect(paint)
+	button.button_down.connect(paint)
+	button.button_up.connect(paint)
+	for item in entries:
+		item.mouse_entered.connect(paint)
+		item.mouse_exited.connect(paint)
+		item.focus_entered.connect(paint)
+		item.focus_exited.connect(paint)
+	popup.about_to_popup.connect(paint)
+	popup.popup_hide.connect(func() -> void:
+		button.set_meta("shut_frame", Engine.get_process_frames())
+		var owner := button.get_viewport().gui_get_focus_owner()
+		if owner == null or (owner != button and popup.is_ancestor_of(owner)):
+			button.grab_focus()
+		paint.call()
+	)
+	button.pressed.connect(func() -> void:
+		if popup.visible:
+			popup.hide()
+			return
+		if int(button.get_meta("shut_frame", -1)) == Engine.get_process_frames():
+			return
+		button.get_tree().process_frame.connect(func() -> void:
+			open_resolution_popup(button, popup, scroll, list, entries[int(button.get_meta("selected"))])
+			paint.call()
+		, CONNECT_ONE_SHOT)
+	)
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(56, 0)
+	row.add_child(spacer)
+	paint.call()
+	return button
+
+
+static func resolution_text(size: Vector2i) -> String:
+	return "%d x %d" % [size.x, size.y]
+
+
+static func ratio_label(face: HBoxContainer, text: String, aside: bool) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 26)
+	label.add_theme_constant_override("shadow_outline_size", 0)
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0))
+	if aside:
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		label.add_theme_color_override("font_color", RATIO)
+	else:
+		label.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	face.add_child(label)
+	return label
+
+
+static func paint_ratio_text(value: Label, ratio: Label, hot: bool) -> void:
+	value.add_theme_color_override("font_color", INK if hot else TEXT_COLOR)
+	ratio.add_theme_color_override("font_color", RATIO_HOT if hot else RATIO)
+
+
+static func open_resolution_popup(button: Button, popup: PopupPanel, scroll: ScrollContainer, list: VBoxContainer, current: Button) -> void:
+	var panel := popup.get_theme_stylebox("panel")
+	var chrome := panel.get_minimum_size()
+	var width := maxf(button.size.x - chrome.x, 0.0)
+	var height := list.get_combined_minimum_size().y
+	var screen := DisplayServer.screen_get_usable_rect()
+	var room := screen.size.y - chrome.y - 8.0
+	var shown := height if room >= height else maxf(room, 80.0)
+	scroll.custom_minimum_size = Vector2(width, shown)
+	var popup_size := Vector2(width + chrome.x, shown + chrome.y)
+	var origin := button.get_screen_position()
+	var pos := origin + Vector2(0, button.size.y)
+	if pos.y + popup_size.y > screen.position.y + screen.size.y and origin.y - popup_size.y >= screen.position.y:
+		pos.y = origin.y - popup_size.y
+	popup.popup(Rect2i(Vector2i(pos), Vector2i(popup_size)))
+	current.grab_focus()
 
 
 static func lock_focus(controls: Array) -> void:
