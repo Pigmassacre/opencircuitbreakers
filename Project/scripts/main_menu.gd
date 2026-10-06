@@ -319,12 +319,6 @@ func _process(delta: float) -> void:
 		pad_hold[i] = PAD_REPEAT
 
 
-func _physics_process(_delta: float) -> void:
-	if backdrop_cars.is_empty() or Engine.get_physics_frames() % Car.PHYSICS_TICKS_PER_GAME_FRAME != 0:
-		return
-	backdrop_cars[0].release_bumps()
-
-
 func _draw() -> void:
 	var dim := 0.38 if page == null or page == main_page else 0.68
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, dim))

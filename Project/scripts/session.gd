@@ -199,7 +199,6 @@ func _physics_process(_delta: float) -> void:
 		return
 	if Net.is_host():
 		Net.publish_state()
-	player.release_bumps()
 
 
 func _input(event: InputEvent) -> void:

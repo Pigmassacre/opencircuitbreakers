@@ -13,7 +13,6 @@ const GRAVITY := 0x3000
 const ROLLING_FRICTION := 0x80
 const ROLLING_STOP := 0x100
 const WRECK_FRAMES := 30
-const SUNK_SLACK := 0.1
 const MAX_SAFE_DROP := 0x80000 / ONE * UNIT_METRES
 const HARD_SURFACE_CHANGE := 0x281 * ANGLE_TO_RAD
 const STEEP_IMPACT := -0x600 / ONE
@@ -155,9 +154,8 @@ var splash_wreck := false
 var splash_state := 0
 var wall_frames := 0
 var contacts := {}
-var touching := {}
-var bump_axis := {}
-var bump_frame := {}
+var bumped := false
+var speed := 0
 var shove_x := 0.0
 var shove_z := 0.0
 var surface := 0
@@ -588,6 +586,7 @@ func game_frame() -> void:
 	var v2 := vel.length_squared()
 	var q := v2 / 131072.0
 	var spd := sqrt(v2) / 64.0
+	speed = int(spd)
 	var horizontal_speed := Vector2(vel.x, vel.z).length() / 64.0
 	var travel := travel_direction(spd)
 
@@ -703,10 +702,6 @@ func make_translucent() -> void:
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for material in body_materials:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-
-
-func ghost() -> bool:
-	return item_timers[Items.GROW] != 0 or item_timers[Items.STILTS] != 0 or item_timers[Items.BOUNCE] != 0 or wreck_frames > 0
 
 
 func update_shape() -> void:
@@ -936,9 +931,7 @@ func resolve_collisions() -> void:
 		var collision := get_slide_collision(i)
 		var n := collision.get_normal()
 		var other := collision.get_collider()
-		if other is Car:
-			bump_car(other, n)
-		elif other is RigidBody3D:
+		if other is RigidBody3D:
 			push_prop(other, n)
 		elif not bounced and n.angle_to(ground_up) > HARD_SURFACE_CHANGE:
 			bounce_off_wall(n)
@@ -958,41 +951,141 @@ func bounce_off_wall(n: Vector3) -> void:
 	wall_frames = WALL_STUN_FRAMES
 
 
-# FUN_00056348. A fresh overlap replaces each horizontal speed with 15/16 of
-# the other's, then kicks them 4 units/frame apart. The speed that was cancelled
-# and, while the pair stays overlapped, each car's own speed, collect in a shove
-# that apply_shove drips onto the position. Grown, stilted, and bouncing cars
-# are skipped, same as the original early return. The contact count is cleared
-# only when the pair is inside the proximity box and misses; leaving the box
-# keeps it, so the next real overlap continues the countdown.
-func bump_car(other: Car, n: Vector3) -> void:
+# The footprint corners at 0x15f08 and the footprint spans at 0x16308 for each
+# 1/32 turn of the original heading, in the coarse cells of bump_bucket.
+# Corner 0 is the one furthest toward -z, then +x, +z and -x.
+const BUMP_CORNERS := [
+	10, 7, 23, 7, 23, 27, 10, 27,
+	13, 6, 25, 9, 20, 29, 8, 26,
+	14, 5, 27, 9, 20, 29, 7, 25,
+	16, 5, 27, 12, 17, 29, 6, 22,
+	19, 4, 29, 14, 14, 29, 4, 19,
+	22, 6, 29, 17, 12, 27, 5, 16,
+	25, 7, 29, 20, 9, 27, 5, 14,
+	25, 9, 28, 21, 8, 26, 5, 14,
+	6, 11, 26, 11, 26, 24, 6, 24,
+	8, 9, 28, 14, 25, 26, 5, 21,
+	9, 7, 29, 14, 25, 27, 5, 20,
+	12, 6, 29, 16, 22, 27, 5, 17,
+	14, 4, 29, 19, 19, 29, 4, 14,
+	17, 5, 27, 22, 16, 29, 6, 12,
+	20, 5, 27, 25, 14, 29, 7, 9,
+	20, 6, 25, 26, 13, 29, 8, 9,
+	10, 7, 23, 7, 23, 27, 10, 27,
+	13, 6, 25, 9, 20, 29, 8, 26,
+	14, 5, 27, 9, 20, 29, 7, 25,
+	16, 5, 27, 12, 17, 29, 6, 22,
+	19, 4, 29, 14, 14, 29, 4, 19,
+	22, 6, 29, 17, 12, 27, 5, 16,
+	25, 7, 29, 20, 9, 27, 5, 14,
+	25, 9, 28, 21, 8, 26, 5, 14,
+	6, 11, 26, 11, 26, 24, 6, 24,
+	8, 9, 28, 14, 25, 26, 5, 21,
+	9, 7, 29, 14, 25, 27, 5, 20,
+	12, 6, 29, 16, 22, 27, 5, 17,
+	14, 4, 29, 19, 19, 29, 4, 14,
+	17, 5, 27, 22, 16, 29, 6, 12,
+	20, 5, 27, 25, 14, 29, 7, 9,
+	20, 6, 25, 26, 13, 29, 8, 9,
+]
+const BUMP_SPANS := [
+	0, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 7, 27, 7, 27, 7, 27, 7, 27, 7, 27, 7, 27, 7, 27, 32, 0, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 32, 0, 21, 26, 15, 27, 7, 27, 6, 28, 7, 28, 7, 29, 8, 29, 8, 20, 9, 14, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 22, 25, 17, 26, 12, 26, 6, 27, 5, 28, 6, 28, 7, 29, 7, 26, 8, 20, 9, 15, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 21, 23, 17, 24, 14, 25, 10, 26, 7, 28, 6, 29, 7, 27, 8, 24, 9, 20, 10, 17, 12, 13, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 17, 21, 15, 23, 14, 25, 12, 27, 10, 28, 7, 28, 6, 26, 5, 24, 7, 21, 8, 20, 10, 18, 13, 16, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 18, 23, 16, 25, 12, 26, 8, 27, 6, 28, 5, 28, 7, 26, 8, 22, 9, 18, 11, 16, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 19, 25, 15, 26, 8, 27, 5, 27, 6, 28, 6, 28, 7, 28, 7, 24, 8, 17, 9, 12, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 17, 25, 8, 26, 5, 26, 6, 27, 6, 27, 7, 28, 7, 24, 8, 14, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 6, 26, 6, 26, 6, 26, 6, 26, 6, 26, 6, 26, 6, 26, 32, 0, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 8, 13, 7, 24, 7, 28, 6, 27, 6, 27, 5, 26, 8, 26, 17, 25, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 9, 14, 8, 18, 7, 26, 7, 29, 6, 28, 5, 28, 6, 27, 12, 26, 17, 26, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 11, 16, 9, 18, 8, 23, 7, 26, 6, 28, 6, 28, 9, 27, 12, 26, 16, 24, 18, 23, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 13, 16, 11, 18, 9, 19, 7, 21, 6, 24, 6, 26, 7, 27, 10, 27, 12, 26, 14, 24, 16, 22, 18, 20, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 12, 16, 10, 18, 9, 23, 8, 27, 7, 29, 7, 29, 9, 28, 14, 27, 17, 26, 19, 24, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 32, 0, 10, 15, 9, 19, 8, 27, 8, 29, 7, 29, 7, 28, 8, 28, 14, 27, 19, 27, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 32, 0, 9, 15, 8, 25, 8, 29, 7, 28, 7, 28, 6, 27, 10, 27, 18, 26, 32, 0, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 7, 27, 7, 27, 7, 27, 7, 27, 7, 27, 7, 27, 7, 27, 32, 0, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 32, 0, 18, 26, 10, 27, 6, 27, 7, 28, 7, 28, 8, 29, 8, 25, 9, 15, 32, 0, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 32, 0, 19, 27, 14, 27, 8, 28, 7, 28, 7, 29, 8, 29, 8, 27, 9, 19, 10, 15, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 19, 24, 17, 26, 14, 27, 9, 28, 7, 29, 7, 29, 8, 27, 9, 23, 10, 18, 12, 16, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 17, 20, 15, 22, 14, 24, 12, 26, 9, 27, 7, 27, 6, 26, 6, 23, 7, 21, 9, 19, 11, 17, 13, 15, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 17, 22, 15, 24, 10, 25, 7, 26, 5, 27, 5, 27, 6, 24, 7, 21, 9, 17, 10, 15, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 19, 24, 15, 25, 7, 26, 4, 26, 5, 27, 5, 28, 6, 27, 7, 21, 7, 16, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 20, 25, 9, 26, 5, 26, 6, 27, 6, 27, 7, 28, 7, 25, 8, 16, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 6, 26, 6, 26, 6, 26, 6, 26, 6, 26, 6, 26, 6, 26, 32, 0, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 32, 0, 8, 16, 7, 25, 7, 28, 6, 27, 6, 27, 5, 26, 9, 26, 19, 25, 32, 0, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 32, 0, 8, 14, 7, 18, 6, 25, 6, 28, 5, 27, 5, 27, 5, 26, 9, 26, 16, 25, 21, 24, 32, 0, 32, 0,
+	1, 32, 0, 32, 0, 32, 0, 10, 15, 8, 17, 7, 21, 6, 25, 5, 27, 5, 28, 7, 26, 11, 25, 15, 24, 17, 22, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 13, 16, 10, 18, 8, 20, 7, 21, 5, 24, 6, 26, 7, 28, 10, 28, 12, 27, 14, 25, 15, 23, 17, 21, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 12, 13, 10, 17, 9, 20, 8, 24, 7, 27, 6, 29, 7, 28, 10, 26, 14, 25, 17, 24, 21, 23, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 9, 15, 8, 20, 7, 26, 7, 29, 6, 28, 5, 28, 6, 27, 12, 26, 17, 26, 22, 25, 32, 0, 32, 0, 32, 0,
+	0, 32, 0, 32, 0, 32, 0, 32, 0, 9, 14, 8, 20, 8, 29, 7, 29, 7, 28, 6, 28, 7, 27, 15, 27, 21, 26, 32, 0, 32, 0, 32, 0,
+]
+# Velocity kick direction for the first car of the pair, by FUN_00056348 side:
+# 1-4 are its corners inside the other car, 5-8 the other car's inside it.
+const BUMP_PUSH := [Vector2i.ZERO, Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, -1), Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0)]
+
+
+# FUN_00055084 runs FUN_00056348 on each pair once every car has moved, in the
+# order (0,1), (0,2), (1,2), (0,3)... Cars never collide physically; they pass
+# through each other except for these bumps.
+static func bump_pass(cars: Array[Car]) -> void:
+	for j in range(1, cars.size()):
+		for i in j:
+			cars[i].bump_pair(cars[j])
+	bump_tones(cars)
+
+
+# FUN_00056348. Inside the proximity box, a corner of one car's footprint
+# (BUMP_CORNERS) landing in the other's (BUMP_SPANS) picks the side. A fresh
+# overlap replaces each horizontal speed with 15/16 of the other's, then kicks
+# them 4 units/frame apart along BUMP_PUSH. The speed that was cancelled and,
+# while the pair stays overlapped, each car's own speed, collect in a shove that
+# apply_shove drips onto the position. A miss inside the box clears the contact
+# count, even for grown, stilted, or bouncing cars; leaving the box keeps it.
+# The original wrecks the bombed car first, but its wreck leaves the speed
+# alone, so the exchange sees the victim's speed either way.
+func bump_pair(other: Car) -> void:
+	var mine := bump_cell()
+	var theirs := other.bump_cell()
+	if absi(mine.x - theirs.x) >= 0x20 or absi(mine.y - theirs.y) >= 0x20:
+		return
+	if absi(height_units(global_position.y) - height_units(other.global_position.y)) >= 0x61:
+		return
+	if wreck_frames > 0 or other.wreck_frames > 0:
+		return
+	var side := corner_inside(mine, bump_heading(), theirs, other.bump_heading())
+	if side == 0:
+		side = corner_inside(theirs, other.bump_heading(), mine, bump_heading())
+		if side != 0:
+			side += 4
+	if side == 0:
+		contacts.erase(other)
+		other.contacts.erase(self)
+		return
 	if item_timers[Items.GROW] != 0 or other.item_timers[Items.GROW] != 0:
 		return
 	if item_timers[Items.STILTS] != 0 or other.item_timers[Items.STILTS] != 0:
 		return
-	var frame := Engine.get_physics_frames() >> 2
-	touching[other] = frame
-	other.touching[self] = frame
-	if bump_frame.get(other, -1) == frame:
-		return
-	bump_frame[other] = frame
-	other.bump_frame[self] = frame
 	if item_timers[Items.BOUNCE] != 0 or other.item_timers[Items.BOUNCE] != 0:
 		return
+	var push: Vector2i = BUMP_PUSH[side]
 	if contacts.get(other, 0) > 0:
 		contacts[other] -= 1
 		other.contacts[self] -= 1
-		if bump_axis[other]:
+		if push.x != 0:
 			shove_x += vel.x
 			other.shove_x += other.vel.x
 		else:
 			shove_z += vel.z
 			other.shove_z += other.vel.z
-		if item_timers[Items.BOMB] > 0x10:
-			other.wreck()
-		if other.item_timers[Items.BOMB] > 0x10:
-			wreck()
+		bomb_bump(other)
 		return
+	wall_frames = CAR_STUN_FRAMES
+	other.wall_frames = CAR_STUN_FRAMES
+	bump_tone()
+	other.bump_tone()
 	var old_x := vel.x
 	var old_z := vel.z
 	var other_x := other.vel.x
@@ -1001,87 +1094,90 @@ func bump_car(other: Car, n: Vector3) -> void:
 	vel.z = share_speed(other_z)
 	other.vel.x = share_speed(old_x)
 	other.vel.z = share_speed(old_z)
-	var along_x := absf(n.x) >= absf(n.z)
-	var kick := 0x4000 * signf(n.x if along_x else n.z)
-	bump_axis[other] = along_x
-	other.bump_axis[self] = along_x
-	if along_x:
+	contacts[other] = CONTACT_FRAMES
+	other.contacts[self] = CONTACT_FRAMES
+	bumped = true
+	other.bumped = true
+	if push.x != 0:
 		shove_x -= old_x
 		other.shove_x -= other_x
-		vel.x += kick
-		other.vel.x -= kick
 	else:
 		shove_z -= old_z
 		other.shove_z -= other_z
-		vel.z += kick
-		other.vel.z -= kick
-	wall_frames = CAR_STUN_FRAMES
-	other.wall_frames = CAR_STUN_FRAMES
-	contacts[other] = CONTACT_FRAMES
-	other.contacts[self] = CONTACT_FRAMES
-	bump_sound(self)
-	bump_sound(other)
+	vel.x += push.x * 0x4000
+	vel.z += push.y * 0x4000
+	other.vel.x -= push.x * 0x4000
+	other.vel.z -= push.y * 0x4000
+	bomb_bump(other)
+
+
+func bomb_bump(other: Car) -> void:
 	if item_timers[Items.BOMB] > 0x10:
 		other.wreck()
 	if other.item_timers[Items.BOMB] > 0x10:
 		wreck()
 
 
+# 1-4 for the first of this car's corners inside the target, 0 for none. The
+# span table row for the target's heading is indexed by x when its flag is 0
+# and by z otherwise, two cells per row.
+static func corner_inside(cell: Vector2i, heading_row: int, target: Vector2i, target_row: int) -> int:
+	var spans := target_row * 33
+	var by_x: bool = BUMP_SPANS[spans] == 0
+	for k in 4:
+		var corner := heading_row * 8 + k * 2
+		var d := cell + Vector2i(BUMP_CORNERS[corner], BUMP_CORNERS[corner + 1]) - target
+		if d.x < 0 or d.x >= 0x20 or d.y < 0 or d.y >= 0x20:
+			continue
+		var row := spans + 1 + ((d.x if by_x else d.y) & 0x1e)
+		var across := d.y if by_x else d.x
+		if BUMP_SPANS[row] <= across and across <= BUMP_SPANS[row + 1]:
+			return k + 1
+	return 0
+
+
+func bump_heading() -> int:
+	return ((-heading) & 0xfff) >> 7
+
+
+func bump_cell() -> Vector2i:
+	return Vector2i(bump_bucket(global_position.x), bump_bucket(global_position.z))
+
+
 # FUN_00056348 queues tone 4 on each car's effect voice. FUN_00032434 plays
-# that as program 1 at volume 0x3c. FUN_0007220c then plays program 0 tone 5
-# for each of the first human-count cars, from that car's speed: the tone's
-# volume minus 10, then 20 below 900 and 50 below 300. No particles.
-func bump_sound(car: Car) -> void:
+# that as program 1 at volume 0x3c.
+func bump_tone() -> void:
 	var list: Array[Car] = items.race.cars
-	var index := list.find(car)
-	var humans := 0
-	for other in list:
-		if other.player_controlled:
-			humans += 1
-	if humans != 1 or index == 0:
+	if humans_in(list) != 1 or list.find(self) == 0:
 		Sound.effect(1, 4, 0x3c)
-	if index < humans:
-		var volume := 70
-		var spd := int(car.vel.length() / 64.0)
-		if spd < 900:
+
+
+# FUN_0007220c plays program 0 tone 5 for each bumped car among the first
+# human-count cars. The volume starts at the tone's volume minus 10 and is not
+# reset between cars: each one below 900 takes 20 and below 300 another 50 off
+# it for itself and every later car. The speed is the one the car update
+# measured, before the bump. No particles.
+static func bump_tones(cars: Array[Car]) -> void:
+	var volume := 70
+	for i in humans_in(cars):
+		var car := cars[i]
+		if not car.bumped:
+			continue
+		car.bumped = false
+		if car.speed < 900:
 			volume -= 20
-		if spd < 300:
+		if car.speed < 300:
 			volume -= 50
-		if volume > 0:
-			Sound.effect(0, 5, volume)
+		volume = maxi(volume, 0)
+		Sound.effect(0, 5, volume)
 
 
-func release_bumps() -> void:
-	var cars := get_tree().get_nodes_in_group("cars")
-	var frame := Engine.get_physics_frames() >> 2
-	for i in cars.size():
-		var a: Car = cars[i]
-		for j in range(i + 1, cars.size()):
-			a.release_bump(cars[j], frame)
-
-
-func release_bump(other: Car, frame: int) -> void:
-	if item_timers[Items.GROW] != 0 or other.item_timers[Items.GROW] != 0:
-		return
-	if item_timers[Items.STILTS] != 0 or other.item_timers[Items.STILTS] != 0:
-		return
-	if int(touching.get(other, -1)) == frame:
-		return
-	if not in_bump_box(other):
-		return
-	contacts.erase(other)
-	other.contacts.erase(self)
-	bump_axis.erase(other)
-	other.bump_axis.erase(self)
-	bump_frame.erase(other)
-	other.bump_frame.erase(self)
-
-
-func in_bump_box(other: Car) -> bool:
-	var dx := bump_bucket(global_position.x) - bump_bucket(other.global_position.x)
-	var dz := bump_bucket(global_position.z) - bump_bucket(other.global_position.z)
-	var dy := height_units(global_position.y) - height_units(other.global_position.y)
-	return absi(dx) < 0x20 and absi(dz) < 0x20 and absi(dy) < 0x61
+static func humans_in(cars: Array[Car]) -> int:
+	var humans := 0
+	for car in cars:
+		if car.player_controlled:
+			humans += 1
+	return humans
 
 
 # (position * 3/4) >> 14, the coarse X/Y the original compares with 32.
@@ -1230,36 +1326,6 @@ func respawn() -> void:
 	begin_appear()
 
 
-# Two cars respawned on the same node line up capsule inside capsule, which
-# leaves the engine no separating direction and it often lifts one onto the
-# other. The original never resolves overlaps itself; it only bumps the pair
-# apart sideways, so a sunk pair skips the engine and bumps instead.
-func sunk_into(other: Car) -> bool:
-	return capsule_gap(other).length() < (collision_shape.shape as CapsuleShape3D).radius * 2.0 - SUNK_SLACK
-
-
-func sunk_normal(other: Car) -> Vector3:
-	var gap := capsule_gap(other)
-	var flat := Vector3(gap.x, 0.0, gap.z)
-	if flat.length_squared() < 0.0001:
-		flat = global_basis.x
-	return flat.normalized()
-
-
-func capsule_gap(other: Car) -> Vector3:
-	var mine := capsule_axis()
-	var theirs := other.capsule_axis()
-	var closest := Geometry3D.get_closest_points_between_segments(mine[0], mine[1], theirs[0], theirs[1])
-	return closest[0] - closest[1]
-
-
-func capsule_axis() -> PackedVector3Array:
-	var capsule := collision_shape.shape as CapsuleShape3D
-	var half := collision_shape.global_basis.y.normalized() * (capsule.height * 0.5 - capsule.radius)
-	var centre := collision_shape.global_position
-	return PackedVector3Array([centre - half, centre + half])
-
-
 func teleport(xform: Transform3D, node := -1) -> void:
 	global_transform = xform
 	heading = wrapi(roundi(xform.basis.get_euler().y / ANGLE_TO_RAD), 0, 4096)
@@ -1271,6 +1337,8 @@ func teleport(xform: Transform3D, node := -1) -> void:
 	splash_wreck = false
 	splash_state = 0
 	wall_frames = 0
+	shove_x = 0.0
+	shove_z = 0.0
 	surface = 0
 	release_hold()
 	if items:

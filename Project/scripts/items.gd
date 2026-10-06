@@ -103,6 +103,8 @@ class Late extends Node:
 
 	func _physics_process(_delta: float) -> void:
 		items.place_visuals()
+		if Engine.get_physics_frames() % Car.PHYSICS_TICKS_PER_GAME_FRAME == Car.PHYSICS_TICKS_PER_GAME_FRAME - 1:
+			items.bump_cars()
 
 
 func setup(race_track: Track, race_state: Race, racers: Array[Car], track_camera: TrackCamera) -> void:
@@ -118,6 +120,10 @@ func setup(race_track: Track, race_state: Race, racers: Array[Car], track_camera
 	add_child(late)
 	for car in cars:
 		car.items = self
+	for i in cars.size():
+		for j in range(i + 1, cars.size()):
+			cars[i].add_collision_exception_with(cars[j])
+			cars[j].add_collision_exception_with(cars[i])
 	pool_timers.resize(POOL)
 	pool_owners.resize(POOL)
 	pool_kinds.resize(POOL)
@@ -177,7 +183,6 @@ func _physics_process(_delta: float) -> void:
 			spawn_table()
 		if pickup_type == UNUSED:
 			pickup_type = REPULSOR
-	update_ghosts()
 
 
 func rand() -> int:
@@ -811,22 +816,12 @@ func place_pickup(node: int, code: int) -> void:
 			pickup_units = Vector3i((u[5] + u[9]) / 2, (u[6] + u[10]) / 2, height)
 
 
-# FUN_00056348 skips car-car collisions while either car has grown, is on
-# stilts or bounces. A pair sunk into each other is bumped here instead of
-# being pushed apart by the engine.
-func update_ghosts() -> void:
-	for i in cars.size():
-		for j in range(i + 1, cars.size()):
-			var ghost := cars[i].ghost() or cars[j].ghost() or cars[i].playback or cars[j].playback
-			var sunk := not ghost and cars[i].sunk_into(cars[j])
-			if sunk:
-				cars[i].bump_car(cars[j], cars[i].sunk_normal(cars[j]))
-			var skip := ghost or sunk
-			if skip != cars[i].get_collision_exceptions().has(cars[j]):
-				if skip:
-					cars[i].add_collision_exception_with(cars[j])
-				else:
-					cars[i].remove_collision_exception_with(cars[j])
+# FUN_00055084 bumps the cars once all of them have moved. It returns
+# immediately while the time-trial flag is set.
+func bump_cars() -> void:
+	if Net.puppet() or race.time_trial:
+		return
+	Car.bump_pass(cars)
 
 
 # Runs every physics tick after the cars, so the engine interpolates what it
