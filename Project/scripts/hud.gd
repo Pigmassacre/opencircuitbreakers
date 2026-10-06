@@ -319,7 +319,8 @@ func draw_icon(texture: Texture2D, rect: Rect2, color: Color, s: float, alpha :=
 	draw_arc(center, radius, 0.0, TAU, 48, Color(color.r, color.g, color.b, 0.95 * alpha), maxf(2.5, 3.0 * s), true)
 	var previous := texture_filter
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	draw_texture_rect(texture, rect, false, Color(color.r, color.g, color.b, alpha))
+	var glyph := rect.size * 0.5
+	draw_texture_rect(texture, Rect2(center - glyph * 0.5, glyph), false, Color(color.r, color.g, color.b, alpha))
 	texture_filter = previous
 
 
