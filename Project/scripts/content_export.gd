@@ -38,6 +38,9 @@ const PREVIEW_STRIDE := 0x1928
 const WORLD_CLUT := 0x67f8
 const WEATHER_CLUT := 0x65f8
 const CAR_PRIM_SIZE: Array[int] = [24, 40, 24, 40]
+# The eight racers plus the bumper car (record 8). Submarines have no bumper car.
+const WITH_BUMPER := 9
+const RACERS := 8
 const FILTERS: Array = [[0, 0], [60, 0], [115, -52], [98, -55], [122, -60]]
 const WATER_OPCODES := {0x7d65: 0x100, 0x7d66: 0x200, 0x7d67: 0x100}
 const RAISED_WATER: Array[int] = [0x1451, -0x9c1, 0x1451 + 0x739, -0x9c1 + 0x581, 0x180]
@@ -160,16 +163,16 @@ func _extract_body(source: String, extra: String) -> void:
 	if fault != "":
 		return
 	ensure_dir(project_dir)
-	export_car_set(disc_root.path_join("WWEST/CARS.DAT"), disc_root.path_join("WWEST/WWEST1.TEX"), project_dir.path_join("cars"), "Car")
+	export_car_set(disc_root.path_join("WWEST/CARS.DAT"), disc_root.path_join("WWEST/WWEST1.TEX"), project_dir.path_join("cars"), "Car", WITH_BUMPER)
 	if fault != "":
 		return
-	export_car_set(disc_root.path_join("VENICE/BOAT.DAT"), disc_root.path_join("VENICE/VENICE1.TEX"), project_dir.path_join("vehicles/venice"), "Venice")
+	export_car_set(disc_root.path_join("VENICE/BOAT.DAT"), disc_root.path_join("VENICE/VENICE1.TEX"), project_dir.path_join("vehicles/venice"), "Venice", WITH_BUMPER)
 	if fault != "":
 		return
-	export_car_set(disc_root.path_join("SWAMP/BOAT.DAT"), disc_root.path_join("SWAMP/SWAMP1.TEX"), project_dir.path_join("vehicles/swamp"), "Swamp")
+	export_car_set(disc_root.path_join("SWAMP/BOAT.DAT"), disc_root.path_join("SWAMP/SWAMP1.TEX"), project_dir.path_join("vehicles/swamp"), "Swamp", WITH_BUMPER)
 	if fault != "":
 		return
-	export_car_set(disc_root.path_join("AQUA/WATER.DAT"), disc_root.path_join("AQUA/AQUA1.TEX"), project_dir.path_join("vehicles/aqua"), "Aqua")
+	export_car_set(disc_root.path_join("AQUA/WATER.DAT"), disc_root.path_join("AQUA/AQUA1.TEX"), project_dir.path_join("vehicles/aqua"), "Aqua", RACERS)
 	if fault != "":
 		return
 	export_game()
@@ -392,12 +395,12 @@ func export_named(track_name: String, world: String, out: String) -> void:
 	)
 
 
-func export_car_set(cars_path: String, tex_path: String, out_dir: String, label: String) -> void:
+func export_car_set(cars_path: String, tex_path: String, out_dir: String, label: String, count: int) -> void:
 	var data := read_file(cars_path)
 	var tex := read_file(tex_path)
 	if fault != "":
 		return
-	var cars := load_cars(data)
+	var cars := load_cars(data, count)
 	var stamp := int(file_stamp[tex_path])
 	for i in cars.size():
 		phase("%s %d" % [label, i + 1])
@@ -617,6 +620,7 @@ func export_level(dat_path: String, trk_path: String, tex_path: String, out_dir:
 			"lane_lift": [byte_lift(trk[o + 0x1e], false), byte_lift(trk[o + 0x1c], false)],
 			"slope": [byte_lift(trk[o + 2], true), byte_lift(trk[o + 3], true)],
 			"ai": [trk[o + 0x18], trk[o + 0x19], trk[o + 0x1a], trk.decode_s16(o + 0x20)],
+			"flags": trk[o + 0x1b],
 		})
 	var ranges: Array = []
 	var respawn_at := TRK_RESPAWN_REVERSE if reverse else TRK_RESPAWN
@@ -995,9 +999,9 @@ func audio_spans(path: String) -> Array:
 	return found
 
 
-func load_cars(data: PackedByteArray) -> Array:
+func load_cars(data: PackedByteArray, count: int) -> Array:
 	var cars: Array = []
-	for i in 8:
+	for i in count:
 		var r := i * 100
 		var nmodels := data.decode_s32(r + 0x20)
 		var fields: Array = []

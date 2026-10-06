@@ -53,6 +53,9 @@ var count_tick := 0x18
 var count_char := 0x33
 var count_slide := 0
 var start_frame := 0
+# DAT_000a7200: everyone drives model 8 with no items, and bumps kick twice as hard.
+var bumper := false
+var bumper_held := false
 
 
 func start(race_track: Track, racers: Array[Car], player_index: int) -> void:
@@ -95,6 +98,8 @@ func begin_game_frame() -> void:
 			trial_frame += 1
 	if countdown == 0 and count_slide == 0:
 		return
+	if countdown == 1:
+		toggle_bumper()
 	var counting := countdown != 0
 	step_countdown()
 	refresh_staged()
@@ -125,9 +130,24 @@ func step_countdown() -> void:
 	count_tick = 0x18
 
 
+# FUN_0003574c, while the countdown digits show: car 0's pad going to exactly
+# Left and Circle flips bumper cars, with more than one human, outside a
+# submarine world and a time trial.
+func toggle_bumper() -> void:
+	if Car.humans_in(cars) < 2 or time_trial or Net.in_match or cars[0].vehicle_kind == Car.VEHICLE_SUB:
+		return
+	var held := cars[0].bumper_pressed()
+	if held and not bumper_held:
+		bumper = not bumper
+	bumper_held = held
+
+
+# FUN_0003a330 holds every car for the whole countdown with more than one human
+# or in a time trial; otherwise the cars leave one by one.
 func refresh_staged() -> void:
+	var together := time_trial or Car.humans_in(cars) > 1
 	for i in cars.size():
-		if time_trial:
+		if together:
 			cars[i].staged = countdown != 0
 		else:
 			cars[i].staged = countdown != 0 and start_gap(i) < 0x60 - start_frame

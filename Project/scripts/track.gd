@@ -41,6 +41,8 @@ var flip_ids := PackedInt32Array()
 var ai_thresholds: Array[PackedInt32Array] = []
 var ai_speeds: Array[PackedInt32Array] = []
 var ai_race := false
+# FUN_00026628: the rough-node rumble only runs where under 36% of nodes carry flag bit 0.
+var rough_nodes := false
 var ai_start := PackedInt32Array([0, 0])
 var gate_fraction := 0
 var edge_fraction := 0
@@ -72,6 +74,11 @@ func load_from(dir: String, collide := true) -> void:
 		node.lane_lift = node.lane_lift.map(func(value: float) -> int: return int(value))
 		node.slope = node.slope.map(func(value: float) -> int: return int(value))
 		node.ai = node.ai.map(func(value: float) -> int: return int(value))
+		node.flags = int(node.flags)
+	var flagged := 0
+	for node: Dictionary in nodes:
+		flagged += node.flags & 1
+	rough_nodes = flagged * 100 / nodes.size() < 0x24
 	for row: Array in info.ai_thresholds:
 		ai_thresholds.append(PackedInt32Array(row))
 	for row: Array in info.ai_speeds:

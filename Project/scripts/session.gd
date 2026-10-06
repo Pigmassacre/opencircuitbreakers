@@ -720,14 +720,14 @@ func setup_input() -> void:
 	add_action("cycle_item", [key(KEY_E), joy_button(JOY_BUTTON_LEFT_SHOULDER)])
 	add_action("pause", [key(KEY_ESCAPE), joy_button(JOY_BUTTON_START)])
 	var keys := [
-		[KEY_W, KEY_S, KEY_A, KEY_D, KEY_SPACE, KEY_E],
-		[KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_CTRL, KEY_SHIFT],
+		[KEY_W, KEY_S, KEY_A, KEY_D, KEY_SPACE, KEY_E, KEY_Q],
+		[KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_CTRL, KEY_SHIFT, KEY_ENTER],
 	]
 	var locations := [KEY_LOCATION_UNSPECIFIED, KEY_LOCATION_RIGHT]
 	for i in 4:
 		var suffix := "_%d" % (i + 1)
 		var device: int = Battle.devices[i]
-		var events: Array[Array] = [[], [], [], [], [], []]
+		var events: Array[Array] = [[], [], [], [], [], [], []]
 		if device >= 0:
 			events = [
 				[joy_button(JOY_BUTTON_A, device), joy_axis(JOY_AXIS_TRIGGER_RIGHT, 1.0, device)],
@@ -736,14 +736,15 @@ func setup_input() -> void:
 				[joy_button(JOY_BUTTON_DPAD_RIGHT, device), joy_axis(JOY_AXIS_LEFT_X, 1.0, device)],
 				[joy_button(JOY_BUTTON_RIGHT_SHOULDER, device)],
 				[joy_button(JOY_BUTTON_LEFT_SHOULDER, device)],
+				[joy_button(JOY_BUTTON_B, device)],
 			]
 		if i < keys.size():
 			for k in events.size():
 				var event := key(keys[i][k])
-				if k >= 4:
+				if k == 4 or k == 5:
 					event.location = locations[i]
 				events[k].append(event)
-		var names := ["accelerate", "brake", "steer_left", "steer_right", "fire_item", "cycle_item"]
+		var names := ["accelerate", "brake", "steer_left", "steer_right", "fire_item", "cycle_item", "bumper"]
 		for k in names.size():
 			var typed: Array[InputEvent] = []
 			typed.assign(events[k])
@@ -780,9 +781,9 @@ func joy_axis(axis: JoyAxis, value: float, device := -1) -> InputEventJoypadMoti
 static func rebind_pads() -> void:
 	if not InputMap.has_action("accelerate_1"):
 		return
-	var buttons: Array[JoyButton] = [JOY_BUTTON_A, JOY_BUTTON_X, JOY_BUTTON_DPAD_LEFT, JOY_BUTTON_DPAD_RIGHT, JOY_BUTTON_RIGHT_SHOULDER, JOY_BUTTON_LEFT_SHOULDER]
-	var axes: Array = [[JOY_AXIS_TRIGGER_RIGHT, 1.0], [JOY_AXIS_TRIGGER_LEFT, 1.0], [JOY_AXIS_LEFT_X, -1.0], [JOY_AXIS_LEFT_X, 1.0], [], []]
-	var names := ["accelerate", "brake", "steer_left", "steer_right", "fire_item", "cycle_item"]
+	var buttons: Array[JoyButton] = [JOY_BUTTON_A, JOY_BUTTON_X, JOY_BUTTON_DPAD_LEFT, JOY_BUTTON_DPAD_RIGHT, JOY_BUTTON_RIGHT_SHOULDER, JOY_BUTTON_LEFT_SHOULDER, JOY_BUTTON_B]
+	var axes: Array = [[JOY_AXIS_TRIGGER_RIGHT, 1.0], [JOY_AXIS_TRIGGER_LEFT, 1.0], [JOY_AXIS_LEFT_X, -1.0], [JOY_AXIS_LEFT_X, 1.0], [], [], []]
+	var names := ["accelerate", "brake", "steer_left", "steer_right", "fire_item", "cycle_item", "bumper"]
 	for i in 4:
 		var device: int = Battle.devices[i]
 		for k in names.size():
@@ -928,7 +929,7 @@ func build_track() -> void:
 		race.ghost_tape = Settings.ghost_tape(track_dir)
 		race.prepare_trial(racers.size() - (1 if ghost_model >= 0 else 0))
 		race.arm_start()
-	elif track.ai_race and not Net.in_match and Battle.players == 0:
+	elif not Net.in_match and (Battle.players > 0 or track.ai_race):
 		race.arm_start()
 	if time_trial:
 		add_camera()

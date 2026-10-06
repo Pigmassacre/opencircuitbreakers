@@ -72,6 +72,8 @@ var fog := Fog.FAR
 var texture_filter := Filter.OFF
 var crt := false
 var crt_curve := 0
+var vibration := true
+var vibration_strength := 100
 var crt_rect: ColorRect
 var best_times := {}
 var best_places := {}
@@ -99,6 +101,8 @@ func _ready() -> void:
 		texture_filter = clampi(int(config.get_value("display", "texture_filter", texture_filter)), 0, Filter.BILINEAR)
 		crt = bool(config.get_value("display", "crt", crt))
 		crt_curve = clampi(int(config.get_value("display", "crt_curve", crt_curve)), 0, 100)
+		vibration = bool(config.get_value("input", "vibration", vibration))
+		vibration_strength = clampi(int(config.get_value("input", "vibration_strength", vibration_strength)), 0, 100)
 		if config.has_section_key("display", "width") and config.has_section_key("display", "height"):
 			var width := int(config.get_value("display", "width"))
 			var height := int(config.get_value("display", "height"))
@@ -252,6 +256,19 @@ func set_crt(on: bool) -> void:
 func set_crt_curve(value: int) -> void:
 	crt_curve = value
 	apply_crt()
+	save()
+
+
+func set_vibration(on: bool) -> void:
+	vibration = on
+	if not on:
+		for device in Input.get_connected_joypads():
+			Input.stop_joy_vibration(device)
+	save()
+
+
+func set_vibration_strength(value: int) -> void:
+	vibration_strength = value
 	save()
 
 
@@ -439,6 +456,8 @@ func save() -> void:
 	config.set_value("display", "texture_filter", texture_filter)
 	config.set_value("display", "crt", crt)
 	config.set_value("display", "crt_curve", crt_curve)
+	config.set_value("input", "vibration", vibration)
+	config.set_value("input", "vibration_strength", vibration_strength)
 	for scene in best_times:
 		config.set_value("times", scene, best_times[scene])
 	for scene in best_places:

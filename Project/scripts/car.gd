@@ -79,11 +79,16 @@ const HANDLING := {
 # 12 floats per vertex: position, normal, color, uv. Record +0x18 is the kind.
 const CAR_DIR := "res://cars/car%d"
 const CAR_MODELS := 8
+const BUMPER_MODEL := 8
 const VEHICLE_CAR := 0
 const VEHICLE_BOAT := 1
 const VEHICLE_SUB := 2
 const VERTEX_FLOATS := 12
 const MAX_STEER_ANGLE := 0.45
+# FUN_00032434 vibration patterns: small motor on, large motor strength, frames.
+const RUMBLE := [[0, 0, 0], [1, 0xf0, 9], [0, 0x48, 4], [1, 100, 6], [1, 0x3c, 4], [1, 0xff, 0x11], [0, 0xa0, 4], [0, 200, 5], [0, 0x78, 5], [0, 0x78, 9], [0, 0x96, 4], [1, 0, 4]]
+const RUMBLE_HOLD := 0.1
+const LISTENER_LIFT := 0x20000 / ONE * UNIT_METRES
 
 @export var player_controlled := false
 var replay := false
@@ -156,6 +161,13 @@ var wall_frames := 0
 var contacts := {}
 var bumped := false
 var speed := 0
+var rumble_pattern := 0
+var rumble_priority := 0
+var rumble_frame := 0
+# car+0x1a0: squared distance to the listener in 4-unit steps, over 32.
+var hearing := 0
+# DAT_000a66a4: game frames in a row on surface 4.
+var spray_frames := 0
 var shove_x := 0.0
 var shove_z := 0.0
 var surface := 0
@@ -190,6 +202,7 @@ var body_lift := 0
 var shown_deform := Vector2i(8, 8)
 var visual := Node3D.new()
 var body := MeshInstance3D.new()
+var shown_model := -1
 var body_surfaces: Array = []
 var body_materials: Array[StandardMaterial3D] = []
 var textured: Array[StandardMaterial3D] = []
@@ -284,15 +297,35 @@ func build_body() -> void:
 	add_child(collision)
 	collision_shape = collision
 	collision_offset = collision.transform
+	load_info()
+	add_to_group(Track.TEXTURED)
+	add_child(visual)
+	visual.add_child(body)
+	build_visual(model)
 
-	var dir := mesh_dir % model
-	var info := load_info()
+
+# FUN_0001f60c draws the body and wheels of the given model. Bumper cars draw
+# model 8 but keep their own colour and vehicle kind.
+func build_visual(drawn: int) -> void:
+	shown_model = drawn
+	for node in visual.get_children():
+		if node != body:
+			visual.remove_child(node)
+			node.queue_free()
+	body_surfaces.clear()
+	steer_pivots.clear()
+	steer_sign.clear()
+	wheel_spinners.clear()
+	wheel_radii.clear()
+	wheel_spin_z.clear()
+	shown_deform = Vector2i(8, 8)
+	var dir := mesh_dir % drawn
+	var info: Dictionary = JSON.parse_string(Data.text(dir + "/car.json"))
 	var atlas_image := Image.new()
 	atlas_image.load_png_from_buffer(Data.bytes(dir + "/atlas.png"))
 	var atlas: Texture2D = ImageTexture.create_from_image(atlas_image)
 	body_materials = [car_material(atlas, BaseMaterial3D.CULL_BACK), car_material(atlas, BaseMaterial3D.CULL_DISABLED)]
 	textured = body_materials
-	add_to_group(Track.TEXTURED)
 	ground_offset = info.ground
 	var bytes := Data.bytes(dir + "/mesh.bin")
 	var offset := 0
@@ -308,10 +341,7 @@ func build_body() -> void:
 					body_surfaces.append([arrays, material])
 			offset += 4 + size
 		meshes.append(mesh)
-
-	add_child(visual)
 	body.mesh = meshes[0]
-	visual.add_child(body)
 
 	for wheel: Dictionary in info.wheels:
 		var pivot := Node3D.new()
@@ -386,6 +416,7 @@ func _physics_process(_delta: float) -> void:
 		update_wheels()
 		if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0:
 			step_appear()
+			hearing = listener_distance()
 			Sound.car_frame(self)
 			Fx.car_frame(self)
 			if splash_wreck:
@@ -393,12 +424,17 @@ func _physics_process(_delta: float) -> void:
 			if vehicle_kind == VEHICLE_SUB:
 				blow_bubbles()
 		return
+	if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0:
+		step_rumble()
 	if frozen:
 		if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0:
 			step_appear()
 		return
 	if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0 and items.race.cars[0] == self:
 		items.race.begin_game_frame()
+	var drawn := BUMPER_MODEL if items.race.bumper else model
+	if drawn != shown_model:
+		build_visual(drawn)
 	if staged:
 		if vehicle_kind != VEHICLE_CAR:
 			visual.position.y = vehicle_lift() * UNIT_METRES
@@ -490,6 +526,8 @@ func ground_contact(ground: Dictionary, was_grounded: bool) -> void:
 
 
 func game_frame() -> void:
+	hearing = listener_distance()
+	Sound.spray(self)
 	if player_controlled and net_driven:
 		fire_input = net_fire
 		cycle_input = net_cycle
@@ -680,16 +718,21 @@ func game_frame() -> void:
 
 	if global_position.y < FALL_WRECK_HEIGHT:
 		wreck()
+	frame_rumble(spd, travel)
 	Sound.car_frame(self)
 	Fx.car_frame(self)
 
 
 # Oil and shots spin the car in place of steering, fastest halfway through,
-# with no grip; leaving the ground ends the spin.
+# with no grip; leaving the ground ends the spin. Every spinning car queues
+# its vibration on car 1's pad (DAT_000a7098), whichever car it is.
 func spin_out() -> void:
 	if grounded:
 		heading = wrapi(heading - mini(spin_frames, 0x40 - spin_frames) * 0x20, 0, 4096)
 		spin_frames -= 1
+		var list: Array[Car] = items.race.cars
+		if humans_in(list) != 1:
+			list[1].rumble(8, 1)
 	else:
 		spin_frames = 0
 	grip = 0
@@ -883,6 +926,7 @@ func redirect_along_surface(n: Vector3) -> void:
 
 
 func land(n: Vector3, height: float) -> bool:
+	rumble(4, 2)
 	if last_ground_height - height > MAX_SAFE_DROP:
 		wreck()
 		return false
@@ -949,6 +993,29 @@ func bounce_off_wall(n: Vector3) -> void:
 	var keep := minf(1.25 - incidence, 1.0)
 	vel = (vel - n * into * 2.0) * keep
 	wall_frames = WALL_STUN_FRAMES
+	rumble(wall_rumble(incidence), 2)
+
+
+# FUN_00043c1c picks a stronger pattern for a fast, head-on wall hit.
+func wall_rumble(incidence: float) -> int:
+	var glance := mini(0x1400 - mini(int(incidence * ONE), 0x1000), 0x1000) >> 1
+	var pace := 4
+	if speed < 0xc00:
+		pace = 3
+	if speed < 0x800:
+		pace = 2
+	if speed < 0x300:
+		pace = 1
+	var strength := pace if glance < 0x700 else 0
+	if glance < 0x580:
+		strength = pace * 2
+	if glance < 0x400:
+		strength = pace * 3
+	if strength < 5:
+		return 4
+	if strength < 9:
+		return 3
+	return 1
 
 
 # The footprint corners at 0x15f08 and the footprint spans at 0x16308 for each
@@ -1040,7 +1107,7 @@ static func bump_pass(cars: Array[Car]) -> void:
 # FUN_00056348. Inside the proximity box, a corner of one car's footprint
 # (BUMP_CORNERS) landing in the other's (BUMP_SPANS) picks the side. A fresh
 # overlap replaces each horizontal speed with 15/16 of the other's, then kicks
-# them 4 units/frame apart along BUMP_PUSH. The speed that was cancelled and,
+# them 4 units/frame apart along BUMP_PUSH, 8 with bumper cars. The speed that was cancelled and,
 # while the pair stays overlapped, each car's own speed, collect in a shove that
 # apply_shove drips onto the position. A miss inside the box clears the contact
 # count, even for grown, stilted, or bouncing cars; leaving the box keeps it.
@@ -1084,8 +1151,8 @@ func bump_pair(other: Car) -> void:
 		return
 	wall_frames = CAR_STUN_FRAMES
 	other.wall_frames = CAR_STUN_FRAMES
-	bump_tone()
-	other.bump_tone()
+	rumble(4, 2)
+	other.rumble(4, 2)
 	var old_x := vel.x
 	var old_z := vel.z
 	var other_x := other.vel.x
@@ -1104,10 +1171,11 @@ func bump_pair(other: Car) -> void:
 	else:
 		shove_z -= old_z
 		other.shove_z -= other_z
-	vel.x += push.x * 0x4000
-	vel.z += push.y * 0x4000
-	other.vel.x -= push.x * 0x4000
-	other.vel.z -= push.y * 0x4000
+	var kick := 0x8000 if items.race.bumper else 0x4000
+	vel.x += push.x * kick
+	vel.z += push.y * kick
+	other.vel.x -= push.x * kick
+	other.vel.z -= push.y * kick
 	bomb_bump(other)
 
 
@@ -1144,19 +1212,11 @@ func bump_cell() -> Vector2i:
 	return Vector2i(bump_bucket(global_position.x), bump_bucket(global_position.z))
 
 
-# FUN_00056348 queues tone 4 on each car's effect voice. FUN_00032434 plays
-# that as program 1 at volume 0x3c.
-func bump_tone() -> void:
-	var list: Array[Car] = items.race.cars
-	if humans_in(list) != 1 or list.find(self) == 0:
-		Sound.effect(1, 4, 0x3c)
-
-
 # FUN_0007220c plays program 0 tone 5 for each bumped car among the first
 # human-count cars. The volume starts at the tone's volume minus 10 and is not
-# reset between cars: each one below 900 takes 20 and below 300 another 50 off
-# it for itself and every later car. The speed is the one the car update
-# measured, before the bump. No particles.
+# reset between cars: each one below 900 takes 20 and below 300 another 50 off,
+# then the car's distance scale multiplies it, for itself and every later car.
+# The speed is the one the car update measured, before the bump.
 static func bump_tones(cars: Array[Car]) -> void:
 	var volume := 70
 	for i in humans_in(cars):
@@ -1168,7 +1228,7 @@ static func bump_tones(cars: Array[Car]) -> void:
 			volume -= 20
 		if car.speed < 300:
 			volume -= 50
-		volume = maxi(volume, 0)
+		volume = maxi(volume * car.volume_scale() / 100, 0)
 		Sound.effect(0, 5, volume)
 
 
@@ -1178,6 +1238,120 @@ static func humans_in(cars: Array[Car]) -> int:
 		if car.player_controlled:
 			humans += 1
 	return humans
+
+
+# Pad word 0x480 exactly: Left and Circle with nothing else held.
+func bumper_pressed() -> bool:
+	if not Input.is_action_pressed("bumper" + controls) or not Input.is_action_pressed("steer_left" + controls):
+		return false
+	for action in ["accelerate", "brake", "steer_right", "fire_item", "cycle_item"]:
+		if Input.is_action_pressed(action + controls):
+			return false
+	return true
+
+
+# FUN_00032360 queues a vibration pattern on the car's pad. It replaces a
+# pattern of the same or lower priority and restarts it.
+func rumble(pattern: int, priority: int) -> void:
+	if not player_controlled or net_driven or replay or rumble_priority > priority:
+		return
+	rumble_priority = priority
+	rumble_pattern = pattern
+	rumble_frame = 0
+
+
+# FUN_00032434 on each pad read, only while the vibration option is on.
+func step_rumble() -> void:
+	if not Settings.vibration:
+		return
+	if rumble_pattern == 0:
+		rumble_priority = 0
+		return
+	var shape: Array = RUMBLE[rumble_pattern]
+	var frame := rumble_frame
+	rumble_frame += 1
+	if frame >= shape[2]:
+		rumble_pattern = 0
+		rumble_priority = 0
+		rumble_frame = 0
+		for device in rumble_devices():
+			Input.stop_joy_vibration(device)
+		return
+	var strength := Settings.vibration_strength / 100.0
+	for device in rumble_devices():
+		Input.start_joy_vibration(device, shape[0] * strength, shape[1] / 255.0 * strength, RUMBLE_HOLD)
+
+
+func rumble_devices() -> Array[int]:
+	if controls == "":
+		return Input.get_connected_joypads()
+	var device: int = Battle.devices[controls.substr(1).to_int() - 1]
+	if device < 0:
+		return []
+	return [device]
+
+
+# FUN_0003a330: in the air, sliding sideways on odd frames, and fast over a
+# rough node or a spray surface while on screen.
+func frame_rumble(spd: float, travel: Vector3) -> void:
+	if not grounded and wreck_frames == 0:
+		rumble(11, 1)
+	if not on_screen:
+		return
+	if grounded and wreck_frames == 0 and spd > 0x200 and ((Engine.get_physics_frames() >> 2) & 1) == 1:
+		var slip := skid_angle(travel)
+		if slip > 0x100 and slip < 0x400:
+			rumble(2, 1)
+	var list: Array[Car] = items.race.cars
+	var index := list.find(self)
+	if track.rough_nodes and spd > 0x200 and (track.node_data(items.race.nodes[index]).flags & 1) != 0:
+		rumble(10, 1)
+	var heard := list.size() < 5 or index == 0
+	if surface == SURFACE_WATER and heard and spd > 0x200 and vehicle_kind == VEHICLE_CAR:
+		rumble(2, 1)
+	if surface == SURFACE_SPRAY:
+		if heard:
+			if spd > 0x200:
+				rumble(2, 1)
+			spray_frames += 1
+	else:
+		spray_frames = 0
+
+
+func skid_angle(travel_dir: Vector3) -> int:
+	var travel := roundi(atan2(-travel_dir.x, -travel_dir.z) / ANGLE_TO_RAD)
+	var diff := (heading - travel) & 0xfff
+	if diff > 0x800:
+		diff = 0x1000 - diff
+	return diff
+
+
+# The listener sits 0x20000 above the camera focus (FUN_00035c5c).
+func listener_distance() -> int:
+	var listener := (get_viewport().get_camera_3d() as TrackCamera).focus + Vector3.UP * LISTENER_LIFT
+	var d := (global_position - listener).abs() / UNIT_METRES * ONE
+	var x := int(d.x) >> 14
+	var y := int(d.z) >> 14
+	var z := int(d.y) >> 14
+	return (x * x + y * y + z * z) >> 5
+
+
+# FUN_00072ee0: DAT_000a7a14 scales one-shots, DAT_000a7a34 the engine.
+func volume_scale() -> int:
+	return maxi(100 - (hearing >> 5), 0)
+
+
+func engine_scale() -> int:
+	var scale := volume_scale()
+	var list: Array[Car] = items.race.cars
+	if humans_in(list) == 1:
+		if list.find(self) < 1:
+			scale -= 10
+		else:
+			scale >>= 1
+	if battle:
+		scale -= 50
+	return maxi(scale, 0)
 
 
 # (position * 3/4) >> 14, the coarse X/Y the original compares with 32.
@@ -1234,29 +1408,23 @@ func push_prop(prop: RigidBody3D, n: Vector3) -> void:
 	vel += n * closing * 0.1
 
 
-# FUN_0002a824 queues tone 5 on the car channel when this is a race. The wreck
-# state reaches 2 in that same update, which is when FUN_00071ef0 plays tone 7.
-# FUN_00032360 only voices car 0 while a single human is playing.
+# FUN_0002a824 vibrates the pad when this is a race. The wreck state reaches 2
+# in that same update, which is when FUN_00071ef0 plays tone 7.
 func wreck() -> void:
 	if wreck_frames > 0:
 		return
 	wreck_frames = WRECK_FRAMES
 	vel = Vector3.ZERO
 	if not battle:
-		var players := 0
-		for other in items.race.cars:
-			if other.player_controlled:
-				players += 1
-		if players != 1 or player_controlled:
-			Sound.effect(0, 5)
-	Sound.effect(0, 7)
+		rumble(5, 3)
+	Sound.scaled(0, 7, self)
 	Sound.stop_engine(self)
 	Fx.despawn(global_position)
 
 
-# FUN_0003a330 surface 0xe. FUN_0002ae04 plays tone 9, marks the wreck as water
-# and spawns the ring. The same frame then advances the state to 2, which is
-# when FUN_00071ef0 plays tone 10.
+# FUN_0003a330 surface 0xe. FUN_0002ae04 vibrates the pad, marks the wreck as
+# water and spawns the ring. The same frame then advances the state to 2, which
+# is when FUN_00071ef0 plays tone 10.
 func begin_splash() -> void:
 	if wreck_frames > 0 or splash_wreck:
 		return
@@ -1264,8 +1432,8 @@ func begin_splash() -> void:
 	splash_state = 2
 	wreck_frames = 1
 	vel = Vector3.ZERO
-	Sound.effect(0, 9)
-	Sound.effect(0, 10)
+	rumble(9, 3)
+	Sound.scaled(0, 10, self)
 	Sound.stop_engine(self)
 	Fx.puddle_ring(global_position)
 
@@ -1285,7 +1453,7 @@ func step_splash(authoritative: bool) -> void:
 		Fx.puddle_droplet(global_position)
 	elif splash_state == 8 or splash_state == 0x10:
 		if authoritative:
-			Sound.effect(0, 9)
+			rumble(9, 3)
 		Fx.puddle_ring(global_position)
 	if splash_state == 0x1e and authoritative:
 		if respawn_held:

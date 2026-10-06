@@ -141,8 +141,13 @@ class CountdownLayer extends Control:
 	const WORDS: Array[String] = ["3", "2", "1", "GO!"]
 	const REST_SIZE := 168.0
 	const PEAK := 1.42
+	# FUN_0003574c bobs the bumper-car sign below the centre of the 240-line
+	# screen with the sine table at 0x14e60, one cycle every 16 frames.
+	const BUMPER_BOB: Array[int] = [0, 1, 4, 9, 16, 22, 27, 30, 31, 30, 27, 22, 15, 9, 4, 1]
 
 	func _draw() -> void:
+		if hud.race and hud.race.bumper and hud.race.countdown == 1:
+			paint_bumper(size.y / Hud.REFERENCE_HEIGHT)
 		if hud.count_clock < 0.0 or hud.count_clock >= SEQUENCE:
 			return
 		var s := size.y / Hud.REFERENCE_HEIGHT
@@ -160,6 +165,13 @@ class CountdownLayer extends Control:
 		if index > 0:
 			paint_word(WORDS[index - 1], t + 1.0, travel, s, 1.0 - t, 1.0)
 		paint_word(WORDS[index], t, travel, s, 1.0, lerpf(PEAK, 1.0, t))
+
+	func paint_bumper(s: float) -> void:
+		var text := "BUMPER CARS"
+		var px := int(56.0 * s)
+		var width := hud.font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
+		var line := 0xa0 + BUMPER_BOB[(Engine.get_physics_frames() >> 2) & 15]
+		paint_outlined(Vector2((size.x - width) * 0.5, size.y * line / 240.0), text, px, s, 1.0)
 
 	func paint_word(text: String, t: float, travel: float, s: float, alpha: float, scale: float) -> void:
 		if text.is_empty() or alpha <= 0.0 or scale <= 0.02:

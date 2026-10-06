@@ -7,6 +7,7 @@ const REQUIRED := [
 	"cars/car0/car.json",
 	"cars/car0/mesh.bin",
 	"cars/car0/atlas.png",
+	"cars/car8/car.json",
 	"vehicles/venice/car0/car.json",
 	"vehicles/swamp/car0/car.json",
 	"vehicles/aqua/car0/car.json",

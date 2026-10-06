@@ -175,8 +175,9 @@ func _physics_process(_delta: float) -> void:
 		puppet_particles()
 		return
 	update_pool()
-	# FUN_00055084 returns immediately while the time-trial flag is set.
-	if not race.time_trial:
+	# FUN_00055084 returns immediately while the time-trial flag is set, and
+	# places no pickups for bumper cars.
+	if not race.time_trial and not race.bumper:
 		if battle or track.pickups.is_empty():
 			spawn_random()
 		else:
@@ -213,7 +214,7 @@ func behind(car: Car, distance: float) -> Vector3:
 # that isn't wrecked and no item already running.
 func car_frame(car: Car) -> void:
 	car.forced_accel = false
-	if car.item_active:
+	if car.item_active and not race.bumper:
 		run_item(car)
 	if car.cycle_input and not car.cycle_held:
 		car.selected_item += 1
@@ -282,47 +283,50 @@ func run_item(car: Car) -> void:
 	item_sounds(car)
 
 
-# FUN_00072864 plays a tone when an item's timer lands on one of these frames.
+# FUN_00072864 plays a tone when an item's timer lands on one of these frames,
+# at the car's distance scale. Shrink takes its volume from tone 13.
 func item_sounds(car: Car) -> void:
 	var kind := car.fired_item
 	var t: int = car.item_timers[OIL] if kind == OIL or kind == GLUE else car.item_timers[kind]
 	match kind:
 		SHRINK:
 			if t == 2 or t == 0x60:
-				Sound.effect(1, 3)
+				Sound.scaled(1, 3, car, 13)
 		GROW:
 			if t == 2 or t == 0x60:
-				Sound.effect(1, 1)
+				Sound.scaled(1, 1, car)
 		ROCKET:
 			if t == 2:
-				Sound.effect(1, 2)
+				Sound.scaled(1, 2, car)
 		REPULSOR:
 			if t == 2 or t == 0x11 or t == 0x22 or t == 0x33 or t == 0x44:
-				Sound.effect(1, 0)
+				Sound.scaled(1, 0, car)
 		OIL, GLUE:
 			if t == 4:
-				Sound.effect(1, 5)
+				Sound.scaled(1, 5, car)
 		CLOUD:
 			if t == 4:
-				Sound.effect(1, 6)
+				Sound.scaled(1, 6, car)
 		UNUSED:
 			if t == 2 or t == 0x12 or t == 0x22 or t == 0x32 or t == 0x42 or t == 0x52:
-				Sound.effect(1, 0)
+				Sound.scaled(1, 0, car)
 		BOMB:
 			if (t & 15) == 15:
-				Sound.effect(1, 4)
+				Sound.scaled(1, 4, car)
 		SHOT:
 			if t == 2:
-				Sound.effect(1, 4)
+				Sound.scaled(1, 4, car)
 		STILTS:
 			if t == 2 or t == 0x60:
-				Sound.effect(2, 1)
+				Sound.scaled(2, 1, car)
 		BOUNCE:
 			if t == 1 or (t & 15) == 15:
-				Sound.effect(2, 0)
+				Sound.scaled(2, 0, car)
 
 
 func shrink(car: Car) -> void:
+	if car.item_timers[SHRINK] == 0:
+		car.rumble(9, 2)
 	var t := maxi(car.item_timers[SHRINK], 1)
 	if t < 13:
 		car.item_scale = SHRINK_IN[t]
@@ -331,6 +335,8 @@ func shrink(car: Car) -> void:
 	if t == 6:
 		car.engine = car.engine * 4 / 3
 		car.grip = car.grip * 4 / 3
+	if t == 0x58:
+		car.rumble(9, 2)
 	if t == 100:
 		end_shrink(car)
 	else:
@@ -346,11 +352,15 @@ func end_shrink(car: Car) -> void:
 
 
 func grow(car: Car) -> void:
+	if car.item_timers[GROW] == 0:
+		car.rumble(9, 2)
 	var t := maxi(car.item_timers[GROW], 1)
 	if t < 13:
 		car.item_scale = GROW_IN[t]
 	if t > 0x58:
 		car.item_scale = GROW_OUT[t - 0x59]
+	if t == 0x58:
+		car.rumble(9, 2)
 	if t == 100:
 		end_grow(car)
 	else:
@@ -394,11 +404,9 @@ func rocket(car: Car) -> void:
 		end_rocket(car)
 	else:
 		car.item_timers[ROCKET] = t + 1
-	# FUN_000574a4 drops a type 0x18 flame on every even timer value. FUN_00032360
-	# keys program 0 tone 6 once; FUN_00032434 holds that voice at volume 0xa0.
-	if car.item_timers[ROCKET] == 2 and car.player_controlled:
-		Sound.effect(0, 6, 0xa0)
+	# FUN_000574a4 vibrates the pad and drops a type 0x18 flame on every even timer value.
 	if (car.item_timers[ROCKET] & 1) == 0:
+		car.rumble(6, 2)
 		Fx.boost_fire(car)
 	var flame := behind(car, 0xb0)
 	for other in cars:
@@ -444,6 +452,8 @@ func repulsor(car: Car) -> void:
 		if wave > 7:
 			wave = 15 - wave
 		car.item_scale = wave + 0x3c
+	if (car.item_timers[REPULSOR] & 15) == 2:
+		car.rumble(6, 2)
 
 
 func end_repulsor(car: Car) -> void:
@@ -468,6 +478,7 @@ func drop_ring(car: Car, kind: int) -> void:
 		var slot := free_slot()
 		if slot == -1:
 			return
+		car.rumble(9, 2)
 		t = 1
 		pool_timers[slot] = 100
 		pool_owners[slot] = cars.find(car)
@@ -491,6 +502,7 @@ func cloud(car: Car) -> void:
 		var slot := free_slot()
 		if slot == -1:
 			return
+		car.rumble(9, 2)
 		pool_timers[slot] = 0x78
 		pool_owners[slot] = cars.find(car)
 		pool_kinds[slot] = POOL_CLOUD
@@ -508,6 +520,7 @@ func bomb(car: Car) -> void:
 	car.item_timers[BOMB] = t + 1
 	if (t & 3) == 0:
 		Fx.bomb_smoke(cars.find(car))
+	car.rumble(9, 1)
 	if t + 1 == 100:
 		end_bomb(car)
 		car.wreck()
@@ -528,6 +541,7 @@ func shot(car: Car) -> void:
 		var slot := free_slot()
 		if slot == -1:
 			return
+		car.rumble(6, 2)
 		pool_timers[slot] = 0x40
 		pool_owners[slot] = cars.find(car)
 		pool_kinds[slot] = POOL_SHOT
@@ -543,12 +557,16 @@ func shot(car: Car) -> void:
 
 
 func stilts(car: Car) -> void:
+	if car.item_timers[STILTS] == 0:
+		car.rumble(9, 2)
 	var t := maxi(car.item_timers[STILTS], 1)
 	car.engine = car.base_engine * 2
 	if t < 9:
 		car.body_lift = t * 8
 	if t > 0x47:
 		car.body_lift = (0x50 - t) * 8
+	if t == 0x48:
+		car.rumble(9, 2)
 	if t == 0x50:
 		end_stilts(car)
 	else:
@@ -568,6 +586,8 @@ func bounce(car: Car) -> void:
 		t = 4
 	car.engine = car.base_engine * 3 / 2
 	car.body_lift = BOUNCE_LIFT[t & 15]
+	if t & 15 == 15:
+		car.rumble(7, 2)
 	if t & 15 > 12:
 		for other in cars:
 			if other != car and near(other, car.global_position, 64, 32) and other.slow_frames == 0:
@@ -651,6 +671,7 @@ func update_pool() -> void:
 				pool_timers[slot] -= 1
 				for other in cars:
 					if other != owner and near(other, pool_positions[slot], 48, 64):
+						other.rumble(5, 2)
 						other.burn_frames = 0x38 if other.burn_frames != 0 else 0x40
 						if other.spin_frames == 0:
 							other.spin_frames = (rand() & 1) * 2 + 0xf

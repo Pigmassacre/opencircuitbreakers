@@ -64,9 +64,8 @@ var streams: Array[AudioStreamWAV] = []
 var engine_loops: Array[AudioStreamWAV] = []
 var oneshots: Array[AudioStreamPlayer] = []
 var oneshot_cursor := 0
-var engines: Array[AudioStreamPlayer3D] = []
+var engines: Array[AudioStreamPlayer] = []
 var sprays: Array[AudioStreamPlayer] = []
-var spray_hold: Array[int] = []
 var voice_car: Array = []
 var voice_tone: Array[int] = []
 var music: AudioStreamPlayer
@@ -110,12 +109,9 @@ func boot() -> void:
 		add_child(player)
 		oneshots.append(player)
 	for i in ENGINES:
-		var player := AudioStreamPlayer3D.new()
+		var player := AudioStreamPlayer.new()
 		player.bus = "SFX"
 		player.process_mode = Node.PROCESS_MODE_PAUSABLE
-		player.unit_size = 12.0
-		player.max_distance = 180.0
-		player.doppler_tracking = AudioStreamPlayer3D.DOPPLER_TRACKING_DISABLED
 		add_child(player)
 		engines.append(player)
 		var spray := AudioStreamPlayer.new()
@@ -123,7 +119,6 @@ func boot() -> void:
 		spray.process_mode = Node.PROCESS_MODE_PAUSABLE
 		add_child(spray)
 		sprays.append(spray)
-		spray_hold.append(0)
 		voice_car.append(null)
 		voice_tone.append(-1)
 	for track in MUSIC_TRACKS:
@@ -154,8 +149,6 @@ func _process(delta: float) -> void:
 		elif voice_tone[i] == -1:
 			continue
 		engines[i].stop()
-		sprays[i].stop()
-		spray_hold[i] = 0
 		voice_car[i] = null
 		voice_tone[i] = -1
 	music_clock += delta
@@ -175,7 +168,6 @@ func silence_race() -> void:
 	for i in engines.size():
 		engines[i].stop()
 		sprays[i].stop()
-		spray_hold[i] = 0
 		voice_car[i] = null
 		voice_tone[i] = -1
 
@@ -204,6 +196,31 @@ func play_effect(program: int, tone: int, volume := -1) -> bool:
 	player.volume_db = linear_to_db(spu_amplitude(requested, tone_vol))
 	player.play()
 	return true
+
+
+# FUN_00072e58: the tone's volume times the car's distance scale.
+func scaled(program: int, tone: int, car: Car, volume_tone := tone) -> void:
+	effect(program, tone, maxi(int(PROGRAMS[program][volume_tone][1]) * car.volume_scale() / 100, 0))
+
+
+# FUN_0007202c plays program 2 tone 1 on a car's first frame on surface 4,
+# unless its last spray is still sounding.
+func spray(car: Car) -> void:
+	if not race_audio or car.spray_frames != 1:
+		return
+	var player := sprays[car.items.race.cars.find(car)]
+	if player.playing:
+		return
+	var info: Array = PROGRAMS[2][1]
+	var volume := maxi(int(info[1]) * car.volume_scale() / 100, 0)
+	if volume == 0:
+		return
+	player.stream = streams[int(info[0]) - 1]
+	player.pitch_scale = note_pitch(int(info[4]), int(info[5]))
+	player.volume_db = linear_to_db(spu_amplitude(volume, int(info[1])))
+	player.play()
+	if Net.in_match and multiplayer.is_server():
+		Net.share_effect.rpc(2, 1, volume)
 
 
 func ui() -> void:
@@ -236,62 +253,24 @@ func car_frame(car: Car) -> void:
 		voice_tone[slot] = key
 		player.stream = engine_loops[int(info[0])]
 		player.play()
+	# FUN_00074d00 then scales the level by the car's engine distance scale.
 	var vol: int = int(info[1])
 	if car.battle:
 		vol += 10
 	elif car.vehicle_kind != Car.VEHICLE_BOAT:
 		vol -= 15
+	vol = vol * car.engine_scale() / 100
 	player.volume_db = linear_to_db(clampf(vol / 127.0, 0.0, 1.0))
 	var spd := int(car.vel.length() / 64.0)
 	player.pitch_scale = bend_scale((spd >> 8) + (spd >> 7) + (spd >> bend_shift), int(info[2]), int(info[3])) * note_pitch(int(info[4]), int(info[5]))
-	player.global_position = car.global_position
-	water_spray(car, spd, slot)
-	if Net.puppet():
-		return
-	if car.grounded and spd > 0x200 and car.surface == Car.SURFACE_LOOSE and Engine.get_physics_frames() % 16 == slot:
-		effect(0, 8, 35)
 
 
 func stop_engine(car: Car) -> void:
 	for i in ENGINES:
 		if voice_car[i] == car:
 			engines[i].stop()
-			sprays[i].stop()
-			spray_hold[i] = 0
 			voice_car[i] = null
 			voice_tone[i] = -1
-
-
-# FUN_0003a330. Surface 4, and surface 0xc on a car world, hold tone 2 while
-# the car is fast. FUN_00032434 keeps that request alive for four frames.
-func water_spray(car: Car, spd: int, slot: int) -> void:
-	var on_water := car.grounded and spd > 0x200 and spray_heard(car) and (car.surface == Car.SURFACE_SPRAY or (car.surface == Car.SURFACE_WATER and car.vehicle_kind == Car.VEHICLE_CAR))
-	if on_water:
-		spray_hold[slot] = 4
-		var player := sprays[slot]
-		if not player.playing:
-			var info: Array = PROGRAMS[0][2]
-			player.stream = engine_loops[int(info[0])]
-			player.pitch_scale = note_pitch(int(info[4]), int(info[5]))
-			player.volume_db = linear_to_db(spu_amplitude(0x48, int(info[1])))
-			player.play()
-		return
-	if spray_hold[slot] > 0:
-		spray_hold[slot] -= 1
-		if spray_hold[slot] == 0:
-			sprays[slot].stop()
-
-
-func spray_heard(car: Car) -> bool:
-	var list: Array[Car] = car.items.race.cars
-	var index := list.find(car)
-	var humans := 0
-	for other: Car in list:
-		if other.player_controlled:
-			humans += 1
-	if humans == 1 and index != 0:
-		return false
-	return list.size() < 5 or index == 0
 
 
 # FUN_00071d10. The race loop is the only place the original updates this, and

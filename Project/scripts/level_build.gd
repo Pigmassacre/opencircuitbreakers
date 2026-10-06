@@ -1503,6 +1503,7 @@ static func build_nodes(parts: Array, loop: Array, tileset: String, line: Array 
 				"lane_lift": [0, 0],
 				"slope": slope,
 				"ai": [0, 0, 0, 0],
+				"flags": 0,
 			})
 	return {"nodes": nodes}
 
@@ -1546,6 +1547,7 @@ static func nodes_from_line(line: Array) -> Array:
 			"lane_lift": [int(lane_lift[0]), int(lane_lift[1])],
 			"slope": [int(slope[0]), int(slope[1])],
 			"ai": [0, 0, 0, 0],
+			"flags": 0,
 		})
 	return nodes
 

@@ -273,10 +273,13 @@ static func fill_options(column: VBoxContainer) -> HSlider:
 	var focus := volume_row(column, "Master", Settings.master, Settings.set_master)
 	volume_row(column, "Music", Settings.music, Settings.set_music)
 	volume_row(column, "SFX", Settings.sfx, Settings.set_sfx)
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 8)
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(gap)
+	section_gap(column)
+	section_header(column, "Controller")
+	var vibration := choice_row(column, "Vibration", ["Off", "On"], int(Settings.vibration), func(index: int) -> void: Settings.set_vibration(index == 1))
+	var strength_row := volume_row(column, "Strength", Settings.vibration_strength, Settings.set_vibration_strength).get_parent() as Control
+	strength_row.visible = Settings.vibration
+	vibration.item_selected.connect(func(index: int) -> void: strength_row.visible = index == 1)
+	section_gap(column)
 	section_header(column, "Graphics")
 	var mode := choice_row(column, "Window", ["Windowed", "Borderless", "Fullscreen"], Settings.window_mode, Settings.set_window_mode)
 	Settings.window_mode_changed.connect(func() -> void: mode.select(Settings.window_mode))
@@ -293,6 +296,13 @@ static func fill_options(column: VBoxContainer) -> HSlider:
 	curve_row.visible = Settings.crt
 	crt.item_selected.connect(func(index: int) -> void: curve_row.visible = index == 1)
 	return focus
+
+
+static func section_gap(column: VBoxContainer) -> void:
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 8)
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(gap)
 
 
 static func section_header(column: VBoxContainer, title: String) -> void:
