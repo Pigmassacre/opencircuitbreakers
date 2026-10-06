@@ -323,7 +323,7 @@ func build_visual(drawn: int) -> void:
 	wheel_radii.clear()
 	wheel_spin_z.clear()
 	shown_deform = Vector2i(8, 8)
-	var dir := mesh_dir % drawn
+	var dir := mesh_dir.get_base_dir().path_join("bumper") if drawn == BUMPER_MODEL else mesh_dir % drawn
 	var info: Dictionary = JSON.parse_string(Data.text(dir + "/car.json"))
 	var atlas_image := Image.new()
 	atlas_image.load_png_from_buffer(Data.bytes(dir + "/atlas.png"))
@@ -340,7 +340,10 @@ func build_visual(drawn: int) -> void:
 			var count := bytes.decode_s32(offset)
 			var size := count * VERTEX_FLOATS * 4
 			if count > 0:
-				var arrays := add_surface(mesh, bytes.slice(offset + 4, offset + 4 + size).to_float32_array(), count, material)
+				var floats := bytes.slice(offset + 4, offset + 4 + size).to_float32_array()
+				if drawn == BUMPER_MODEL and i == 0:
+					paint_bumper(floats, count, atlas_image.get_width(), items.race.cars.find(self))
+				var arrays := add_surface(mesh, floats, count, material)
 				if i == 0:
 					body_surfaces.append([arrays, material])
 			offset += 4 + size
@@ -366,6 +369,31 @@ func build_visual(drawn: int) -> void:
 			wheel_spinners.append(spinner)
 			wheel_radii.append(wheel.radius)
 			wheel_spin_z.append(flags == 0x70)
+
+
+# FUN_00024218 draws the bumper body with the car index. Cars 0-3 swap its
+# colour channels (yellow, green, blue, red) and slide its textured faces 32
+# texels per car onto their number plate; cars 4-6 darken it and car 7 is black.
+# Textured faces sit in the first 256-texel atlas tile, the white texel after it.
+func paint_bumper(floats: PackedFloat32Array, count: int, atlas_width: int, index: int) -> void:
+	for i in count:
+		var f := i * VERTEX_FLOATS
+		var r := floats[f + 6]
+		var g := floats[f + 7]
+		var b := floats[f + 8]
+		var painted: Vector3
+		match index:
+			0: painted = Vector3(b, b, r)
+			1: painted = Vector3(r, b, g)
+			2: painted = Vector3(r, g, b)
+			3: painted = Vector3(b, g, r)
+			7: painted = Vector3.ZERO
+			_: painted = Vector3(r, g, b) / float(1 << (index - 3))
+		floats[f + 6] = painted.x
+		floats[f + 7] = painted.y
+		floats[f + 8] = painted.z
+		if index < 4 and floats[f + 10] * atlas_width < 256:
+			floats[f + 10] += index * 32.0 / atlas_width
 
 
 func add_surface(mesh: ArrayMesh, floats: PackedFloat32Array, count: int, material: Material) -> Array:

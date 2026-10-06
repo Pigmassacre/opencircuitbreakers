@@ -41,6 +41,9 @@ const CAR_PRIM_SIZE: Array[int] = [24, 40, 24, 40]
 # The eight racers plus the bumper car (record 8). Submarines have no bumper car.
 const WITH_BUMPER := 9
 const RACERS := 8
+# The bumper car textures from the VRAM page at (512, 256), outside every world
+# TEX. The first 0x8000 bytes of TUNNEL.TIM are that page.
+const SHARED_TPAGE := 0x18
 const FILTERS: Array = [[0, 0], [60, 0], [115, -52], [98, -55], [122, -60]]
 const WATER_OPCODES := {0x7d65: 0x100, 0x7d66: 0x200, 0x7d67: 0x100}
 const RAISED_WATER: Array[int] = [0x1451, -0x9c1, 0x1451 + 0x739, -0x9c1 + 0x581, 0x180]
@@ -398,19 +401,20 @@ func export_named(track_name: String, world: String, out: String) -> void:
 func export_car_set(cars_path: String, tex_path: String, out_dir: String, label: String, count: int) -> void:
 	var data := read_file(cars_path)
 	var tex := read_file(tex_path)
+	var shared := read_file(disc_root.path_join("TUNNEL/TUNNEL.TIM"))
 	if fault != "":
 		return
 	var cars := load_cars(data, count)
 	var stamp := int(file_stamp[tex_path])
 	for i in cars.size():
 		phase("%s %d" % [label, i + 1])
-		export_one_car(cars[i], tex, stamp, out_dir.path_join("car%d" % i))
+		export_one_car(cars[i], tex, shared, stamp, out_dir.path_join("bumper" if i == RACERS else "car%d" % i))
 		phase_done()
 		if fault != "":
 			return
 
 
-func export_one_car(car: Dictionary, tex: PackedByteArray, stamp: int, out_dir: String) -> void:
+func export_one_car(car: Dictionary, tex: PackedByteArray, shared: PackedByteArray, stamp: int, out_dir: String) -> void:
 	var models: Array = [car.body]
 	for wheel_model in car.wheel_models:
 		models.append(wheel_model)
@@ -431,7 +435,8 @@ func export_one_car(car: Dictionary, tex: PackedByteArray, stamp: int, out_dir: 
 	for combo_key in combos:
 		key = combo_key
 		var index: int = combos[key]
-		blit_tile(atlas, cached_tile(tex, key.x, key.y, stamp), (index % CAR_COLUMNS) * TILE, (divi(index, CAR_COLUMNS)) * TILE)
+		var tile := shared_tile(shared, key.y) if key.x == SHARED_TPAGE else cached_tile(tex, key.x, key.y, stamp)
+		blit_tile(atlas, tile, (index % CAR_COLUMNS) * TILE, (divi(index, CAR_COLUMNS)) * TILE)
 	var white := combos.size()
 	var origin_x := (white % CAR_COLUMNS) * TILE
 	var origin_y := (divi(white, CAR_COLUMNS)) * TILE
@@ -2160,6 +2165,36 @@ func decode_tile(tex: PackedByteArray, tpage: int, clut: int) -> PackedByteArray
 			for nibble_i in 4:
 				var idx := (word >> (nibble_i * 4)) & 0xf
 				var po := idx * 4
+				rgba[dst] = pal[po]
+				rgba[dst + 1] = pal[po + 1]
+				rgba[dst + 2] = pal[po + 2]
+				rgba[dst + 3] = pal[po + 3]
+				dst += 4
+	return rgba
+
+
+func shared_tile(page: PackedByteArray, clut: int) -> PackedByteArray:
+	var clut_x := (clut & 0x3f) * 16 - 512
+	var clut_y := ((clut >> 6) & 0x1ff) - 256
+	var pal := PackedByteArray()
+	pal.resize(64)
+	for i in 16:
+		var c := page.decode_u16(((clut_y * 64) + clut_x + i) * 2)
+		if c == 0:
+			continue
+		var o := i * 4
+		pal[o] = divi(((c & 31) * 255), 31)
+		pal[o + 1] = divi((((c >> 5) & 31) * 255), 31)
+		pal[o + 2] = divi((((c >> 10) & 31) * 255), 31)
+		pal[o + 3] = 255
+	var rgba := PackedByteArray()
+	rgba.resize(TILE * TILE * 4)
+	var dst := 0
+	for v in TILE:
+		for u_group in 64:
+			var word := page.decode_u16((v * 64 + u_group) * 2)
+			for nibble_i in 4:
+				var po := ((word >> (nibble_i * 4)) & 0xf) * 4
 				rgba[dst] = pal[po]
 				rgba[dst + 1] = pal[po + 1]
 				rgba[dst + 2] = pal[po + 2]

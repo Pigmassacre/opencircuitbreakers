@@ -47,6 +47,8 @@ The front-end lift (`FUN_00066d9c`) also vibrates; the port has no 3D car select
 
 `_DAT_000a7200`. `FUN_0003574c` flips it while the countdown sits at 1 (`DAT_000a647c == 1`, `_DAT_000a6f78 == 0`) on the press of car 0's pad going to exactly `0x480` (Left and Circle), with more than one human, outside a submarine world and a time trial. It draws sprite `0xc5` of table `_DAT_000a7334` at x `0x100`, y `0xa0` plus the 16-entry bob at `0x14e60`. While set, no pickups are placed with several humans, `FUN_00056cf0` runs no items, every car draws record 8 of its world's car file, and the `FUN_00056348` kick doubles to `0x8000` while the front end is down (`_DAT_000a6b24 == 0`). The 3D car select (`_DAT_000a6b24 == 1`) drives bumper cars at the normal kick; in play the toggle only arms in a battle, since that is the only start with several humans.
 
+Record 8 is drawn through `FUN_00024218` with the car index as its shade argument instead of `FUN_00023b58`. For cars 0 to 3 that swaps the vertex colour channels of the blue body, giving yellow, green, blue and red, and adds `index * 0x20` to the U of every textured gouraud face, which moves the plate onto that car's number. Cars 4 to 6 halve, quarter and eighth the colours and car 7 is black. The body and wheels texture from tpage `0x18` (VRAM 512, 256), which no world TEX covers: the first `0x8000` bytes of `TUNNEL/TUNNEL.TIM` are that page, CLUTs included. The exporter writes the record to a `bumper` folder beside `car0` to `car7`.
+
 `FUN_00024bc4` arms the countdown (`DAT_000a647c = 0x14`) for every start, battles included. `FUN_0003a330` holds every car for the whole countdown unless one human races outside a time trial.
 
 ## Front end
@@ -73,6 +75,7 @@ The tournament milestone celebration is not ported. When car 0 finishes having w
 | --- | --- | --- |
 | `FUN_00018c7c` | `sound.gd` `music_frame` | Display-buffer parity, flipped before the audio update |
 | `FUN_0001f60c` | `car.gd` `update_body_lean` | Apply body roll |
+| `FUN_00024218` | `car.gd` `paint_bumper` | Bumper car colour and number plate |
 | `FUN_00020a80` | `items.gd` `update_pool` | 16-slot dropped and launched item pool |
 | `FUN_00021450` | `items.gd` `move_shot` | Shot follows the floor, dies on a wall |
 | `FUN_00021e48` | `items.gd` `pickup_quad` | Pickup quad |
