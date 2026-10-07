@@ -1544,13 +1544,18 @@ func build_track_records(names: VBoxContainer) -> void:
 	track_records.add_child(record_column(track_time_mark, time_line))
 	track_place_main = record_caption(26)
 	track_place_field = record_caption(16)
-	track_place_field.size_flags_vertical = Control.SIZE_SHRINK_END
 	var place_line := HBoxContainer.new()
 	place_line.alignment = BoxContainer.ALIGNMENT_CENTER
 	place_line.add_theme_constant_override("separation", 4)
 	place_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	place_line.add_child(track_place_main)
-	place_line.add_child(track_place_field)
+	var field_pad := MarginContainer.new()
+	field_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	field_pad.size_flags_vertical = Control.SIZE_SHRINK_END
+	var face := UiTheme.font()
+	field_pad.add_theme_constant_override("margin_bottom", int(round(face.get_descent(26) - face.get_descent(16))))
+	field_pad.add_child(track_place_field)
+	place_line.add_child(field_pad)
 	var place_mark := Hud.IconBadge.new(Hud.ICON_MEDAL)
 	place_mark.tint = Hud.GOLD
 	track_place_column = record_column(place_mark, place_line)
