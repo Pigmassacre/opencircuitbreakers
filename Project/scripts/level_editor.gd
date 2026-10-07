@@ -10,7 +10,8 @@ const TOOL_ROAD := 3
 const TOOL_CAMERA := 4
 const TOOL_LAP := 5
 const TOOL_PICKUP := 6
-const TOOL_NAMES := ["[B] Brush", "[X] Eraser", "[C] Pick", "[N] Road", "[V] Camera", "[Y] Race path", "[P] Pickups"]
+const TOOL_SELECT := 7
+const TOOL_NAMES := ["[B] Brush", "[X] Eraser", "[C] Pick", "[N] Road", "[V] Camera", "[Y] Race path", "[P] Pickups", "[M] Select"]
 const LAP_NAMES := ["Every lap", "Lap 1", "Lap 2", "Lap 3"]
 const PANEL_W := 200
 
@@ -48,6 +49,17 @@ var pending_view := 0
 var brush_mirror := 0
 var brush_lap := true
 var editor_tool := TOOL_BRUSH
+var select_from := FAR_CELL
+var select_drag := false
+var select_moved := false
+var stamp: Array = []
+var stamp_anchor := Vector3i.ZERO
+var stamp_x0 := 0
+var stamp_x1 := 0
+var stamp_z0 := 0
+var stamp_z1 := 0
+var stamp_serial := 0
+var stamp_mesh_key := ""
 var laying := false
 var place_from := -1
 var show_cameras := false
@@ -258,12 +270,16 @@ func _process(delta: float) -> void:
 	if signature_now() != ghost_revision:
 		if active_tool() == TOOL_BRUSH:
 			rebuild_ghost()
-		else:
+		elif editor_tool != TOOL_SELECT:
 			ghost_revision = signature_now()
 			ghost.mesh = null
+		else:
+			ghost_revision = signature_now()
 		rebuild_cursor_box()
 		refresh_road_guide()
-	ghost.visible = active_tool() == TOOL_BRUSH
+	if editor_tool == TOOL_SELECT:
+		refresh_stamp_ghost()
+	ghost.visible = active_tool() == TOOL_BRUSH or (editor_tool == TOOL_SELECT and not stamp.is_empty() and not select_drag)
 	if editor_tool == TOOL_CAMERA:
 		var hot := hover_node if hover_node >= 0 else camera_node
 		if hot != camera_hot:
@@ -391,6 +407,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			set_tool(TOOL_LAP)
 		KEY_P:
 			set_tool(TOOL_PICKUP)
+		KEY_M:
+			set_tool(TOOL_SELECT)
 		KEY_K:
 			if editor_tool == TOOL_PICKUP:
 				cycle_pickup_lap()
@@ -420,6 +438,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				step_camera_distance(1)
 		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
 			stroke_down()
+			finish_select()
 			end_stroke()
 		KEY_DELETE, KEY_BACKSPACE:
 			if editor_tool == TOOL_ROAD:
@@ -451,6 +470,7 @@ func _input(event: InputEvent) -> void:
 			span_node = -1
 			camera_drag = false
 			erased = FAR_CELL
+			finish_select()
 			end_stroke()
 			flush()
 
@@ -523,7 +543,8 @@ func over_ui() -> bool:
 
 
 func signature_now() -> String:
-	return "%s:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d" % [level.tileset, cursor.x, cursor.y, cursor.z, cursor_off.x, cursor_off.y, cursor_oy, brush_tile, brush_rot, brush_mirror, 1 if brush_lap else 0, editor_tool * 2 + (1 if wants_erase() else 0), level.line.size(), 1 if level.joined else 0, 1 if road_ok else 0, road_units.x, road_units.y, road_units.z, hover_node, 1 if laying else 0, span_hover.x, span_hover.y, place_from, 1 if wants_pick() else 0, hover_part, level.parts.size(), place_div, height_div]
+	var base := "%s:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d" % [level.tileset, cursor.x, cursor.y, cursor.z, cursor_off.x, cursor_off.y, cursor_oy, brush_tile, brush_rot, brush_mirror, 1 if brush_lap else 0, editor_tool * 2 + (1 if wants_erase() else 0), level.line.size(), 1 if level.joined else 0, 1 if road_ok else 0, road_units.x, road_units.y, road_units.z, hover_node, 1 if laying else 0, span_hover.x, span_hover.y, place_from, 1 if wants_pick() else 0, hover_part, level.parts.size(), place_div, height_div]
+	return "%s:%d:%d:%d:%d:%d" % [base, 1 if select_drag else 0, select_from.x, select_from.y, select_from.z, stamp_serial]
 
 
 func plane_hit(screen: Vector2) -> Variant:
@@ -1107,7 +1128,7 @@ func active_div() -> int:
 func snap_div() -> int:
 	if tileset_grid() <= 1:
 		return 1
-	if editor_tool == TOOL_CAMERA or editor_tool == TOOL_LAP:
+	if editor_tool == TOOL_CAMERA or editor_tool == TOOL_LAP or editor_tool == TOOL_SELECT:
 		return 1
 	if editor_tool == TOOL_ROAD:
 		return active_div()
@@ -1130,7 +1151,7 @@ func shown_grid() -> int:
 func active_height() -> int:
 	if tileset_grid() <= 1:
 		return 1
-	if editor_tool == TOOL_CAMERA or editor_tool == TOOL_LAP or editor_tool == TOOL_ROAD:
+	if editor_tool == TOOL_CAMERA or editor_tool == TOOL_LAP or editor_tool == TOOL_ROAD or editor_tool == TOOL_SELECT:
 		return 1
 	var tile: Dictionary = LevelBuild.tile_def(level.tileset, brush_index())
 	if String(tile.role) != "scenery":
@@ -1222,6 +1243,110 @@ func paint_at_cursor() -> void:
 	put_part(false)
 
 
+func finish_select() -> void:
+	if not select_drag:
+		return
+	select_drag = false
+	if editor_tool != TOOL_SELECT:
+		return
+	if select_moved or stamp.is_empty():
+		capture_stamp()
+	else:
+		place_stamp()
+
+
+func capture_stamp() -> void:
+	var x0 := mini(select_from.x, cursor.x)
+	var x1 := maxi(select_from.x, cursor.x)
+	var z0 := mini(select_from.z, cursor.z)
+	var z1 := maxi(select_from.z, cursor.z)
+	var layer := select_from.y
+	var picked := {}
+	for i in level.parts.size():
+		var part: Dictionary = level.parts[i]
+		if int(part.y) != layer:
+			continue
+		if int(part.x) < x0 or int(part.x) > x1 or int(part.z) < z0 or int(part.z) > z1:
+			continue
+		take_stamp(picked, i)
+	stamp = []
+	stamp_serial += 1
+	stamp_mesh_key = ""
+	if picked.is_empty():
+		flash("Nothing there")
+		return
+	var bx0 := 999999
+	var bx1 := -999999
+	var bz0 := 999999
+	var bz1 := -999999
+	for i in level.parts.size():
+		if not picked.has(i):
+			continue
+		var part: Dictionary = level.parts[i]
+		stamp.append(part.duplicate(true))
+		bx0 = mini(bx0, int(part.x))
+		bx1 = maxi(bx1, int(part.x))
+		bz0 = mini(bz0, int(part.z))
+		bz1 = maxi(bz1, int(part.z))
+	stamp_x0 = bx0
+	stamp_x1 = bx1
+	stamp_z0 = bz0
+	stamp_z1 = bz1
+	stamp_anchor = Vector3i(cursor.x, layer, cursor.z)
+
+
+func take_stamp(picked: Dictionary, index: int) -> void:
+	if picked.has(index):
+		return
+	picked[index] = true
+	var part: Dictionary = level.parts[index]
+	var spots: Array = LevelBuild.stamp_cells(part, level.tileset)
+	var tile_index := int(part.tile)
+	var nudge := LevelBuild.part_off(part)
+	var lift := LevelBuild.part_oy(part)
+	for other_index in level.parts.size():
+		if picked.has(other_index):
+			continue
+		var other: Dictionary = level.parts[other_index]
+		var slot := int(other.slot) if other.has("slot") else 0
+		if int(other.tile) != tile_index or slot >= spots.size() or LevelBuild.part_off(other) != nudge or LevelBuild.part_oy(other) != lift:
+			continue
+		var at: Vector3i = spots[slot]
+		if int(other.x) == at.x and int(other.y) == at.y and int(other.z) == at.z:
+			picked[other_index] = true
+
+
+func place_stamp() -> void:
+	if stamp.is_empty():
+		return
+	var dx := cursor.x - stamp_anchor.x
+	var dy := cursor.y - stamp_anchor.y
+	var dz := cursor.z - stamp_anchor.z
+	if dx == 0 and dy == 0 and dz == 0:
+		return
+	var stack := stacks()
+	for src in stamp:
+		var part: Dictionary = (src as Dictionary).duplicate(true)
+		part.x = int(part.x) + dx
+		part.y = int(part.y) + dy
+		part.z = int(part.z) + dz
+		var at := find_same(part) if stack else find_at(int(part.x), int(part.y), int(part.z))
+		if at >= 0:
+			level.parts[at] = part
+		else:
+			level.parts.append(part)
+		rebake_cell(Vector3i(int(part.x), int(part.y), int(part.z)))
+	sync_fields()
+	dirty = true
+
+
+func clear_stamp() -> void:
+	stamp = []
+	select_drag = false
+	stamp_serial += 1
+	stamp_mesh_key = ""
+
+
 func set_tool(next: int) -> void:
 	var was := editor_tool
 	editor_tool = next
@@ -1232,6 +1357,7 @@ func set_tool(next: int) -> void:
 	if laying and not level.line.is_empty():
 		place_from = int(level.line.size()) - 1
 	span_node = -1
+	select_drag = false
 	if next == TOOL_BRUSH:
 		paint_facing()
 	if was == TOOL_LAP or next == TOOL_LAP:
@@ -1300,6 +1426,10 @@ func stroke_down() -> void:
 			press_node = index
 			node_held = true
 			node_press = Settings.mouse_position()
+	elif editor_tool == TOOL_SELECT:
+		select_from = cursor
+		select_drag = true
+		select_moved = false
 	elif wants_pick():
 		picked_part = -1
 		sample_tile()
@@ -1319,6 +1449,10 @@ func stroke_down() -> void:
 
 
 func stroke_drag() -> void:
+	if editor_tool == TOOL_SELECT:
+		if cursor != select_from:
+			select_moved = true
+		return
 	if node_held and Settings.mouse_position().distance_to(node_press) < 20.0:
 		return
 	if node_held:
@@ -2236,6 +2370,7 @@ func load_from(path: String) -> void:
 	var owned := undo_scope()
 	camera_memory = []
 	battle_memory = []
+	clear_stamp()
 	level = LevelBuild.load_level(path)
 	level.erase("source")
 	level.erase("unsaved")
@@ -2258,6 +2393,7 @@ func begin_new() -> void:
 	var owned := undo_scope()
 	camera_memory = []
 	battle_memory = []
+	clear_stamp()
 	level = LevelBuild.blank()
 	apply_level_fields()
 	focus = Vector3.ZERO
@@ -2384,6 +2520,8 @@ func paint_status() -> void:
 	elif editor_tool == TOOL_CAMERA:
 		var shown := active_camera_node()
 		here = "Node %d" % shown if shown >= 0 else "No node"
+	elif editor_tool == TOOL_SELECT and not stamp.is_empty() and not select_drag:
+		here = "%d tiles" % stamp.size()
 	elif editor_tool == TOOL_PICKUP:
 		here = "No spot"
 		var spot := hover_spot
@@ -2404,6 +2542,17 @@ func paint_status() -> void:
 			message = "Place a road first"
 		else:
 			message = "[Click] Node    [Drag] Pitch and distance    [Q/E] Yaw    [T] Type"
+	elif editor_tool == TOOL_SELECT:
+		if notice_time > 0.0:
+			message = notice
+		elif select_drag:
+			var wide := absi(cursor.x - select_from.x) + 1
+			var deep := absi(cursor.z - select_from.z) + 1
+			message = "Selecting %d×%d" % [wide, deep]
+		elif stamp.is_empty():
+			message = "[Drag] Select cells"
+		else:
+			message = "[Click] Place copy    [Drag] Select again"
 	elif editor_tool == TOOL_PICKUP and notice_time <= 0.0:
 		if level.line.is_empty():
 			message = "Place a road first"
@@ -2577,6 +2726,44 @@ func rebuild_ghost() -> void:
 	ghost.position = Vector3(0.0, 0.12, 0.0)
 
 
+func refresh_stamp_ghost() -> void:
+	if stamp.is_empty() or select_drag:
+		ghost.mesh = null
+		stamp_mesh_key = ""
+		return
+	var key := "%s:%d" % [level.tileset, stamp_serial]
+	if key != stamp_mesh_key:
+		stamp_mesh_key = key
+		rebuild_stamp_ghost()
+	ghost.position = stamp_shift()
+
+
+func stamp_shift() -> Vector3:
+	var dx := cursor.x - stamp_anchor.x
+	var dy := cursor.y - stamp_anchor.y
+	var dz := cursor.z - stamp_anchor.z
+	var y := LevelBuild.metres(float(dy * LevelBuild.layer_step(level.tileset)))
+	return Vector3(LevelBuild.metres(float(dx * LevelBuild.CELL_U)), y + 0.12, LevelBuild.metres(float(dz * LevelBuild.CELL_U)))
+
+
+func rebuild_stamp_ghost() -> void:
+	var mesh := LevelBuild.preview_mesh(stamp, level.tileset)
+	for surface in mesh.get_surface_count():
+		var material := (mesh.surface_get_material(surface) as StandardMaterial3D).duplicate()
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.albedo_color = Color(material.albedo_color, 0.9)
+		mesh.surface_set_material(surface, material)
+	var arrows := LevelBuild.flow_mesh(stamp, level.tileset)
+	var flow_material := StandardMaterial3D.new()
+	flow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	flow_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	flow_material.vertex_color_use_as_albedo = true
+	for surface in arrows.get_surface_count():
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrows.surface_get_arrays(surface))
+		mesh.surface_set_material(mesh.get_surface_count() - 1, flow_material)
+	ghost.mesh = mesh
+
+
 func snapped_focus() -> Vector2i:
 	var step := LevelBuild.metres(LevelBuild.CELL_U)
 	return Vector2i(roundi(focus.x / step), roundi(focus.z / step))
@@ -2675,6 +2862,9 @@ func rebuild_grid() -> void:
 
 
 func rebuild_cursor_box() -> void:
+	if editor_tool == TOOL_SELECT:
+		rebuild_select_cursor()
+		return
 	if editor_tool == TOOL_ROAD:
 		rebuild_road_cursor()
 		return
@@ -2699,6 +2889,45 @@ func rebuild_cursor_box() -> void:
 		tool.set_color(color)
 		tool.add_vertex(corners[(i + 1) % 4])
 	cursor_box.mesh = tool.commit()
+
+
+func rebuild_select_cursor() -> void:
+	var lines := SurfaceTool.new()
+	lines.begin(Mesh.PRIMITIVE_LINES)
+	var gold := Color(0.99, 0.88, 0.58, 1.0)
+	var cyan := Color(0.45, 0.92, 1.0, 1.0)
+	if select_drag:
+		add_rect(lines, select_from.x, select_from.z, cursor.x, cursor.z, select_from.y, gold, 0.1)
+	elif not stamp.is_empty():
+		add_rect(lines, stamp_x0, stamp_z0, stamp_x1, stamp_z1, stamp_anchor.y, cyan, 0.08)
+		var dx := cursor.x - stamp_anchor.x
+		var dy := cursor.y - stamp_anchor.y
+		var dz := cursor.z - stamp_anchor.z
+		if dx != 0 or dy != 0 or dz != 0:
+			add_rect(lines, stamp_x0 + dx, stamp_z0 + dz, stamp_x1 + dx, stamp_z1 + dz, cursor.y, gold, 0.14)
+	else:
+		add_rect(lines, cursor.x, cursor.z, cursor.x, cursor.z, cursor.y, gold, 0.1)
+	cursor_box.mesh = lines.commit()
+
+
+func add_rect(lines: SurfaceTool, x0: int, z0: int, x1: int, z1: int, layer: int, color: Color, lift: float) -> void:
+	var step := LevelBuild.metres(float(LevelBuild.CELL_U))
+	var y := LevelBuild.cell_plane(layer, level.tileset) + lift
+	var min_x := (float(mini(x0, x1)) - 0.5) * step
+	var max_x := (float(maxi(x0, x1)) + 0.5) * step
+	var min_z := (float(mini(z0, z1)) - 0.5) * step
+	var max_z := (float(maxi(z0, z1)) + 0.5) * step
+	var corners: Array[Vector3] = [
+		Vector3(min_x, y, min_z),
+		Vector3(max_x, y, min_z),
+		Vector3(max_x, y, max_z),
+		Vector3(min_x, y, max_z),
+	]
+	for i in 4:
+		lines.set_color(color)
+		lines.add_vertex(corners[i])
+		lines.set_color(color)
+		lines.add_vertex(corners[(i + 1) % 4])
 
 
 func rebuild_pick_cursor() -> void:
@@ -3044,7 +3273,7 @@ func build_tools(root: Control) -> void:
 	tools_panel.anchor_top = 0
 	tools_panel.anchor_bottom = 0
 	tools_panel.offset_top = 40
-	tools_panel.offset_bottom = 462
+	tools_panel.offset_bottom = 488
 	root.add_child(tools_panel)
 	var tools_column := VBoxContainer.new()
 	tools_column.add_theme_constant_override("separation", 6)
@@ -3062,7 +3291,7 @@ func build_tools(root: Control) -> void:
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.custom_minimum_size = Vector2(0, 48)
+		button.custom_minimum_size = Vector2(0, 42)
 		button.add_theme_font_size_override("font_size", 16)
 		button.pressed.connect(set_tool.bind(i))
 		tools.add_child(button)
@@ -3239,9 +3468,11 @@ func layout_side() -> void:
 	elif editor_tool == TOOL_BRUSH:
 		height = 220.0
 		heading = "Tile"
+	elif editor_tool == TOOL_SELECT:
+		heading = "Layer"
 	var placing := editor_tool != TOOL_CAMERA and editor_tool != TOOL_LAP and editor_tool != TOOL_PICKUP
-	var show_grid := placing and tileset_grid() > 1
-	var show_height := placing and editor_tool != TOOL_ROAD and tileset_grid() > 1
+	var show_grid := placing and editor_tool != TOOL_SELECT and tileset_grid() > 1
+	var show_height := placing and editor_tool != TOOL_ROAD and editor_tool != TOOL_SELECT and tileset_grid() > 1
 	if show_grid:
 		height += 48.0
 	if show_height:
@@ -3331,6 +3562,7 @@ func on_tileset_selected(index: int) -> void:
 
 func apply_tileset(id: String) -> void:
 	var owned := undo_scope()
+	clear_stamp()
 	level.tileset = id
 	level.parts = []
 	level.road = []
@@ -4269,6 +4501,23 @@ func tool_icon(kind: int) -> Texture2D:
 	elif kind == TOOL_PICKUP:
 		fill_tri(image, Vector2i(16, 4), Vector2i(5, 14), Vector2i(27, 14))
 		fill_tri(image, Vector2i(5, 15), Vector2i(27, 15), Vector2i(16, 28))
+	elif kind == TOOL_SELECT:
+		for x in range(6, 26):
+			image.set_pixel(x, 7, Color.WHITE)
+			image.set_pixel(x, 24, Color.WHITE)
+		for y in range(7, 25):
+			image.set_pixel(6, y, Color.WHITE)
+			image.set_pixel(25, y, Color.WHITE)
+		for i in range(6, 13):
+			image.set_pixel(i, 8, Color.WHITE)
+			image.set_pixel(i, 23, Color.WHITE)
+			image.set_pixel(31 - i, 8, Color.WHITE)
+			image.set_pixel(31 - i, 23, Color.WHITE)
+		for i in range(7, 14):
+			image.set_pixel(7, i, Color.WHITE)
+			image.set_pixel(24, i, Color.WHITE)
+			image.set_pixel(7, 31 - i, Color.WHITE)
+			image.set_pixel(24, 31 - i, Color.WHITE)
 	return ImageTexture.create_from_image(image)
 
 
