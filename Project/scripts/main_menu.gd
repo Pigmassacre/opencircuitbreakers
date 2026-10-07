@@ -101,7 +101,13 @@ var mode_bumper: Button
 var track_start: Button
 var track_label: Label
 var track_group: Label
-var track_best: Label
+var track_records: HBoxContainer
+var track_time_mark: Hud.IconBadge
+var track_time_main: Label
+var track_time_cents: Label
+var track_place_column: VBoxContainer
+var track_place_main: Label
+var track_place_field: Label
 var track_world: TextureRect
 var track_weather: TextureRect
 var track_pad_hold := 0.0
@@ -1406,11 +1412,7 @@ func build_tracks(column: VBoxContainer) -> void:
 	track_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	track_label.add_theme_font_size_override("font_size", 36)
 	names.add_child(track_label)
-	track_best = Label.new()
-	track_best.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	track_best.add_theme_font_size_override("font_size", 24)
-	track_best.add_theme_color_override("font_color", UiTheme.CREAM)
-	names.add_child(track_best)
+	build_track_records(names)
 
 	track_start = add_nav(column, "Next", open_mode, true)
 	add_nav(column, "Back", leave_tracks, false)
@@ -1521,6 +1523,82 @@ func record_dir(index: int) -> String:
 	if path.ends_with(".json"):
 		return LevelBuild.course_dir(path)
 	return path
+
+
+func build_track_records(names: VBoxContainer) -> void:
+	track_records = HBoxContainer.new()
+	track_records.alignment = BoxContainer.ALIGNMENT_CENTER
+	track_records.add_theme_constant_override("separation", 48)
+	track_records.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	names.add_child(track_records)
+	track_time_mark = Hud.IconBadge.new(Hud.ICON_TROPHY)
+	var time_line := HBoxContainer.new()
+	time_line.alignment = BoxContainer.ALIGNMENT_CENTER
+	time_line.add_theme_constant_override("separation", 3)
+	time_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	track_time_main = record_caption(24)
+	time_line.add_child(track_time_main)
+	track_time_cents = record_caption(13)
+	track_time_cents.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	time_line.add_child(track_time_cents)
+	track_records.add_child(record_column(track_time_mark, time_line))
+	track_place_main = record_caption(26)
+	track_place_field = record_caption(16)
+	track_place_field.size_flags_vertical = Control.SIZE_SHRINK_END
+	var place_line := HBoxContainer.new()
+	place_line.alignment = BoxContainer.ALIGNMENT_CENTER
+	place_line.add_theme_constant_override("separation", 4)
+	place_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	place_line.add_child(track_place_main)
+	place_line.add_child(track_place_field)
+	var place_mark := Hud.IconBadge.new(Hud.ICON_MEDAL)
+	place_mark.tint = Hud.GOLD
+	track_place_column = record_column(place_mark, place_line)
+	track_records.add_child(track_place_column)
+
+
+func record_column(mark: Control, caption: Control) -> VBoxContainer:
+	var column := VBoxContainer.new()
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation", 0)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(mark)
+	column.add_child(caption)
+	return column
+
+
+func record_caption(font_size: int) -> Label:
+	var label := Label.new()
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", Hud.GOLD)
+	return label
+
+
+func show_track_records(dir: String) -> void:
+	var seconds := Settings.best_time(dir)
+	var has_time := seconds >= 0.0
+	if has_time:
+		var total := int(seconds * 100.0)
+		track_time_main.text = "%d:%02d" % [total / 6000, total / 100 % 60]
+		track_time_cents.text = "%02d" % (total % 100)
+		track_time_cents.visible = true
+		track_time_main.add_theme_color_override("font_color", Hud.GOLD)
+		track_time_mark.tint = Hud.GOLD
+		track_time_mark.mark_alpha = 1.0
+	else:
+		track_time_main.text = "—"
+		track_time_cents.visible = false
+		track_time_main.add_theme_color_override("font_color", UiTheme.CREAM)
+		track_time_mark.tint = Hud.TEXT_COLOR
+		track_time_mark.mark_alpha = 0.45
+	track_time_mark.queue_redraw()
+	var place := Settings.best_place(dir)
+	track_place_column.visible = place >= 1
+	if place < 1:
+		return
+	track_place_main.text = Hud.ordinal(place)
+	track_place_field.text = "/%d" % Settings.best_field(dir)
 
 
 func best_caption(dir: String) -> String:
@@ -1814,14 +1892,14 @@ func show_track(index: int) -> void:
 	if track_for_battle or track_for_online:
 		battle_track = index
 		track_group.visible = false
-		track_best.visible = false
+		track_records.visible = false
 	else:
 		race_track = index
 		track_group.visible = track_groups[index] > 0
 		if track_groups[index] > 0:
 			track_group.text = "Group %d" % track_groups[index]
-		track_best.visible = true
-		track_best.text = best_caption(record_dir(index))
+		track_records.visible = true
+		show_track_records(record_dir(index))
 	var path := track_paths[index]
 	var tab := 1 if path.ends_with(".json") else 0
 	listed_pick[tab] = index

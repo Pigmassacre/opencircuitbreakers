@@ -12,6 +12,17 @@ const TOOL_LAP := 5
 const TOOL_PICKUP := 6
 const TOOL_SELECT := 7
 const TOOL_NAMES := ["[B] Brush", "[X] Eraser", "[C] Pick", "[N] Road", "[V] Camera", "[Y] Race path", "[P] Pickups", "[M] Select"]
+const TOOL_ICONS: Array[Texture2D] = [
+	preload("res://icons/toolBrush.png"),
+	preload("res://icons/toolEraser.png"),
+	preload("res://icons/target.png"),
+	preload("res://icons/car.png"),
+	preload("res://icons/video.png"),
+	preload("res://icons/flag.png"),
+	preload("res://icons/diamond.png"),
+	preload("res://icons/cursor.png"),
+]
+const PLAY_ICON := preload("res://icons/next.png")
 const LAP_NAMES := ["Every lap", "Lap 1", "Lap 2", "Lap 3"]
 const PANEL_W := 200
 
@@ -3416,8 +3427,10 @@ func on_view_menu(id: int) -> void:
 func run_button(parent: Node, label: String, trial: bool) -> void:
 	var button := Button.new()
 	button.text = label
-	button.icon = play_icon()
-	button.expand_icon = false
+	button.icon = PLAY_ICON
+	button.expand_icon = true
+	button.add_theme_constant_override("icon_max_width", 18)
+	button.add_theme_constant_override("icon_max_height", 18)
 	button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	button.focus_mode = Control.FOCUS_NONE
@@ -3460,13 +3473,6 @@ func run_face(fill: Color, lip: Color) -> StyleBoxFlat:
 	return style
 
 
-func play_icon() -> Texture2D:
-	var image := Image.create(14, 14, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0, 0, 0, 0))
-	fill_tri(image, Vector2i(3, 1), Vector2i(3, 12), Vector2i(12, 6))
-	return ImageTexture.create_from_image(image)
-
-
 func build_tools(root: Control) -> void:
 	tools_panel = side_panel()
 	tools_panel.anchor_top = 0
@@ -3485,8 +3491,10 @@ func build_tools(root: Control) -> void:
 		var button := Button.new()
 		button.focus_mode = Control.FOCUS_NONE
 		button.text = TOOL_NAMES[i]
-		button.icon = tool_icon(i)
-		button.expand_icon = false
+		button.icon = TOOL_ICONS[i]
+		button.expand_icon = true
+		button.add_theme_constant_override("icon_max_width", 26)
+		button.add_theme_constant_override("icon_max_height", 26)
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -4647,106 +4655,6 @@ func paint_tools() -> void:
 		button.add_theme_color_override("icon_hover_color", UiTheme.INK)
 		button.add_theme_color_override("icon_pressed_color", ink)
 		button.add_theme_color_override("icon_hover_pressed_color", UiTheme.INK)
-
-
-func tool_icon(kind: int) -> Texture2D:
-	var image := Image.create(32, 32, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0, 0, 0, 0))
-	if kind == TOOL_BRUSH:
-		for i in 18:
-			var radius := 1
-			if i < 6:
-				radius = 3
-			elif i < 12:
-				radius = 2
-			blot(image, 7 + i, 23 - i, radius)
-	elif kind == TOOL_ERASER:
-		for y in range(11, 22):
-			for x in range(6, 26):
-				if x == 17:
-					continue
-				image.set_pixel(x, y, Color.WHITE)
-	elif kind == TOOL_PICK:
-		blot(image, 22, 8, 5)
-		for i in 12:
-			blot(image, 18 - i, 12 + i, 1)
-		blot(image, 6, 26, 2)
-	elif kind == TOOL_ROAD:
-		blot(image, 6, 24, 3)
-		blot(image, 13, 18, 2)
-		for i in 8:
-			blot(image, 15 + i, 17 - i, 1)
-		fill_tri(image, Vector2i(29, 4), Vector2i(20, 4), Vector2i(24, 14))
-	elif kind == TOOL_CAMERA:
-		for y in range(12, 22):
-			for x in range(6, 26):
-				image.set_pixel(x, y, Color.WHITE)
-		for y in range(7, 13):
-			for x in range(11, 20):
-				image.set_pixel(x, y, Color.WHITE)
-		for y in range(14, 20):
-			for x in range(12, 20):
-				var dx := x - 16
-				var dy := y - 17
-				if dx * dx + dy * dy <= 8:
-					image.set_pixel(x, y, Color(0, 0, 0, 0))
-	elif kind == TOOL_LAP:
-		for y in range(6, 26):
-			image.set_pixel(8, y, Color.WHITE)
-			image.set_pixel(9, y, Color.WHITE)
-		for y in range(6, 16):
-			for x in range(10, 26):
-				image.set_pixel(x, y, Color.WHITE)
-	elif kind == TOOL_PICKUP:
-		fill_tri(image, Vector2i(16, 4), Vector2i(5, 14), Vector2i(27, 14))
-		fill_tri(image, Vector2i(5, 15), Vector2i(27, 15), Vector2i(16, 28))
-	elif kind == TOOL_SELECT:
-		for x in range(6, 26):
-			image.set_pixel(x, 7, Color.WHITE)
-			image.set_pixel(x, 24, Color.WHITE)
-		for y in range(7, 25):
-			image.set_pixel(6, y, Color.WHITE)
-			image.set_pixel(25, y, Color.WHITE)
-		for i in range(6, 13):
-			image.set_pixel(i, 8, Color.WHITE)
-			image.set_pixel(i, 23, Color.WHITE)
-			image.set_pixel(31 - i, 8, Color.WHITE)
-			image.set_pixel(31 - i, 23, Color.WHITE)
-		for i in range(7, 14):
-			image.set_pixel(7, i, Color.WHITE)
-			image.set_pixel(24, i, Color.WHITE)
-			image.set_pixel(7, 31 - i, Color.WHITE)
-			image.set_pixel(24, 31 - i, Color.WHITE)
-	return ImageTexture.create_from_image(image)
-
-
-func blot(image: Image, x: int, y: int, radius: int) -> void:
-	for dy in range(-radius, radius + 1):
-		for dx in range(-radius, radius + 1):
-			if dx * dx + dy * dy > radius * radius + radius:
-				continue
-			var px := x + dx
-			var py := y + dy
-			if px < 0 or py < 0 or px >= image.get_width() or py >= image.get_height():
-				continue
-			image.set_pixel(px, py, Color.WHITE)
-
-
-func fill_tri(image: Image, a: Vector2i, b: Vector2i, c: Vector2i) -> void:
-	var min_x := mini(a.x, mini(b.x, c.x))
-	var max_x := maxi(a.x, maxi(b.x, c.x))
-	var min_y := mini(a.y, mini(b.y, c.y))
-	var max_y := maxi(a.y, maxi(b.y, c.y))
-	var area := float((b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y))
-	for py in range(min_y, max_y + 1):
-		for px in range(min_x, max_x + 1):
-			var w0 := float((b.x - px) * (c.y - py) - (c.x - px) * (b.y - py))
-			var w1 := float((c.x - px) * (a.y - py) - (a.x - px) * (c.y - py))
-			var w2 := float((a.x - px) * (b.y - py) - (b.x - px) * (a.y - py))
-			var inside := (area > 0.0 and w0 >= 0.0 and w1 >= 0.0 and w2 >= 0.0) or (area < 0.0 and w0 <= 0.0 and w1 <= 0.0 and w2 <= 0.0)
-			if not inside or px < 0 or py < 0 or px >= image.get_width() or py >= image.get_height():
-				continue
-			image.set_pixel(px, py, Color.WHITE)
 
 
 func tool_style(fill: Color, lip: Color) -> StyleBoxFlat:
