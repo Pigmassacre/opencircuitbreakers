@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.4 - 2026-10-07
+
+### Added
+- A Select tool in the level editor. Drag a box to copy the tiles inside it, including pieces on higher layers, then stamp the copy. Q and E rotate it, and the selection shows in solid yellow.
+- A loading percentage on the scene wipe while a tileset or track loads.
+
+### Changed
+- Track select shows your best time and best finishing place with the same trophy and medal badges as the finish screen.
+- Level editor tools use the same icons as the rest of the game.
+- The colour band on the singleplayer car select is narrower.
+
+### Fixed
+- The place suffix lines up with the number on the track select screen.
+
 ## 1.0.3 - 2026-10-06
 
 ### Added
