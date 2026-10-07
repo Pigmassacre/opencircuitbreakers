@@ -1343,7 +1343,7 @@ func parts_inside(x0: int, x1: int, z0: int, z1: int, layer: int) -> Array:
 	var picked := {}
 	for i in level.parts.size():
 		var part: Dictionary = level.parts[i]
-		if int(part.y) != layer:
+		if int(part.y) < layer:
 			continue
 		if int(part.x) < x0 or int(part.x) > x1 or int(part.z) < z0 or int(part.z) > z1:
 			continue
@@ -2897,15 +2897,10 @@ func paint_select_tint(parts: Array) -> void:
 	if parts.is_empty():
 		select_tint.mesh = null
 		return
-	var mesh := LevelBuild.make_mesh(LevelBuild.visual_buckets(parts, level.tileset), null)
-	var material := StandardMaterial3D.new()
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.albedo_color = Color(1.0, 1.0, 0.25)
+	var mesh := LevelBuild.make_mesh(LevelBuild.visual_buckets(parts, level.tileset, false, Color(1.0, 0.86, 0.05)), null)
 	for surface in mesh.get_surface_count():
-		mesh.surface_set_material(surface, material)
+		var material := mesh.surface_get_material(surface) as StandardMaterial3D
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	select_tint.mesh = mesh
 	select_tint.position = Vector3(0.0, 0.08, 0.0)
 

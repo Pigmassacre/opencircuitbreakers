@@ -1988,18 +1988,18 @@ static func draw_road_flow(bucket: Dictionary, parts: Array, tileset: String, ro
 		add_flow_marker(bucket, road_surface(part, tileset), color)
 
 
-static func visual_buckets(parts: Array, tileset: String, show_lap: bool = false) -> Dictionary:
+static func visual_buckets(parts: Array, tileset: String, show_lap: bool = false, tint: Color = Color.WHITE) -> Dictionary:
 	var single := mesh_bucket()
 	var double := mesh_bucket()
 	var discard := PackedVector3Array()
 	for part: Dictionary in parts:
-		var tint := Color.WHITE
-		if show_lap:
-			tint = LAP_ON_TINT if on_lap(part) else LAP_OFF_TINT
+		var color := tint
+		if color == Color.WHITE and show_lap:
+			color = LAP_ON_TINT if on_lap(part) else LAP_OFF_TINT
 		if int(part.piece) == Piece.SCENERY:
-			stamp_visual(part, tileset, single, double, tint)
+			stamp_visual(part, tileset, single, double, color)
 		else:
-			add_part(part, true, single, double, discard, tileset, tint)
+			add_part(part, true, single, double, discard, tileset, color)
 	return {"single": single, "double": double}
 
 
