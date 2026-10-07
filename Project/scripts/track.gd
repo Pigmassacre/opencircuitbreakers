@@ -57,12 +57,57 @@ func read_text(path: String) -> String:
 
 
 func read_bytes(path: String) -> PackedByteArray:
+	return FileAccess.get_file_as_bytes(disk_path(path))
+
+
+func disk_path(path: String) -> String:
 	if Engine.is_editor_hint() or path.begins_with("user://"):
-		return FileAccess.get_file_as_bytes(path)
-	return Data.bytes(path)
+		return path
+	return Data.path(path)
 
 
 func load_from(dir: String, collide := true) -> void:
+	var info := apply_header(dir)
+	var source := Image.new()
+	source.load_png_from_buffer(read_bytes(dir + "/atlas.png"))
+	var flip: Image = null
+	if (scrolls.size() > 0 or flip_groups.size() > 0) and flip_bank.size() > 0:
+		flip = Image.new()
+		flip.load_png_from_buffer(read_bytes(dir + "/flip.png"))
+	var materials := install_atlas(source, flip)
+	var bytes := read_bytes(dir + "/mesh.bin")
+	var mesh := build_mesh(bytes, materials)
+	bytes = read_bytes(dir + "/objects.bin")
+	build_objects(bytes, info, materials)
+	var instance := MeshInstance3D.new()
+	instance.name = "Mesh"
+	instance.mesh = mesh
+	add_child(instance)
+	if collide:
+		build_collision(read_bytes(dir + "/collision.bin"))
+
+
+func load_async(dir: String) -> void:
+	var info := apply_header(dir)
+	await Wipe.breathe(0.04)
+	var source := Image.new()
+	source.load_png_from_buffer(await Wipe.read_file(disk_path(dir + "/atlas.png"), 0.04, 0.12))
+	var flip: Image = null
+	if (scrolls.size() > 0 or flip_groups.size() > 0) and flip_bank.size() > 0:
+		flip = Image.new()
+		flip.load_png_from_buffer(await Wipe.read_file(disk_path(dir + "/flip.png"), 0.12, 0.16))
+	var materials := install_atlas(source, flip)
+	await Wipe.breathe(0.18)
+	var mesh := await build_mesh_async(await Wipe.read_file(disk_path(dir + "/mesh.bin"), 0.18, 0.36), materials, 0.36, 0.68)
+	await build_objects_async(await Wipe.read_file(disk_path(dir + "/objects.bin"), 0.68, 0.74), info, materials, 0.74, 0.8)
+	var instance := MeshInstance3D.new()
+	instance.name = "Mesh"
+	instance.mesh = mesh
+	add_child(instance)
+	await build_collision_async(await Wipe.read_file(disk_path(dir + "/collision.bin"), 0.8, 0.86), 0.86, 1.0)
+
+
+func apply_header(dir: String) -> Dictionary:
 	var info: Dictionary = JSON.parse_string(read_text(dir + "/track.json"))
 	nodes = info.nodes
 	for node: Dictionary in nodes:
@@ -112,71 +157,136 @@ func load_from(dir: String, collide := true) -> void:
 	script_tokens = PackedInt32Array(info.script)
 	for entry: Array in info.objects:
 		objects.append_array(PackedInt32Array(entry))
+	return info
 
-	var source := Image.new()
-	source.load_png_from_buffer(read_bytes(dir + "/atlas.png"))
+
+func install_atlas(source: Image, flip: Image) -> Array[StandardMaterial3D]:
 	var atlas: Texture2D = ImageTexture.create_from_image(source)
 	if scrolls.size() > 0 or flip_groups.size() > 0:
 		animate_textures = true
 		atlas_image = source
 		atlas_texture = atlas
-		if flip_bank.size() > 0:
-			flip_image = Image.new()
-			flip_image.load_png_from_buffer(read_bytes(dir + "/flip.png"))
+		flip_image = flip
 	var materials: Array[StandardMaterial3D] = [track_material(atlas, BaseMaterial3D.CULL_BACK), track_material(atlas, BaseMaterial3D.CULL_DISABLED)]
 	textured = materials
 	add_to_group(TEXTURED)
-	var bytes := read_bytes(dir + "/mesh.bin")
+	return materials
+
+
+func build_mesh(bytes: PackedByteArray, materials: Array[StandardMaterial3D]) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
-	var faces := PackedVector3Array()
 	var offset := 0
 	for material in materials:
 		var positions := read_surface(mesh, bytes, offset, material)
 		offset += 4 + positions.size() * VERTEX_FLOATS * 4
-		faces.append_array(positions)
+	return mesh
 
-	bytes = read_bytes(dir + "/objects.bin")
-	offset = 0
+
+func build_mesh_async(bytes: PackedByteArray, materials: Array[StandardMaterial3D], a: float, b: float) -> ArrayMesh:
+	var mesh := ArrayMesh.new()
+	var offset := 0
+	var step := (b - a) / float(materials.size())
+	for i in materials.size():
+		var positions := await read_surface_async(mesh, bytes, offset, materials[i], a + step * float(i), a + step * float(i + 1))
+		offset += 4 + positions.size() * VERTEX_FLOATS * 4
+	return mesh
+
+
+func build_objects(bytes: PackedByteArray, info: Dictionary, materials: Array[StandardMaterial3D]) -> void:
+	var offset := 0
 	for model: float in info.object_models:
 		var object_mesh := ArrayMesh.new()
 		for material in materials:
 			offset += 4 + read_surface(object_mesh, bytes, offset, material).size() * VERTEX_FLOATS * 4
 		object_meshes[int(model)] = object_mesh
 
-	var instance := MeshInstance3D.new()
-	instance.name = "Mesh"
-	instance.mesh = mesh
-	add_child(instance)
-	if not collide:
-		return
 
-	# FUN_00044a88 tests the collision-block faces. collision.bin is those faces,
-	# split the same way as the drawn quads.
-	var collision_bytes := read_bytes(dir + "/collision.bin")
+func build_objects_async(bytes: PackedByteArray, info: Dictionary, materials: Array[StandardMaterial3D], a: float, b: float) -> void:
+	var models: Array = info.object_models
+	var offset := 0
+	var denom := maxi(models.size(), 1)
+	for index in models.size():
+		var model: float = models[index]
+		var object_mesh := ArrayMesh.new()
+		var step := (b - a) / float(denom) / float(materials.size())
+		var base := lerpf(a, b, float(index) / float(denom))
+		for i in materials.size():
+			var positions := await read_surface_async(object_mesh, bytes, offset, materials[i], base + step * float(i), base + step * float(i + 1))
+			offset += 4 + positions.size() * VERTEX_FLOATS * 4
+		object_meshes[int(model)] = object_mesh
+	await Wipe.breathe(b)
+
+
+func build_collision(collision_bytes: PackedByteArray) -> void:
+	place_collision(classify_collision(collision_bytes))
+
+
+func build_collision_async(collision_bytes: PackedByteArray, a: float, b: float) -> void:
 	var tri_count := collision_bytes.decode_s32(0)
 	var floats := collision_bytes.slice(4, 4 + tri_count * 9 * 4).to_float32_array()
 	var surface_at := 4 + tri_count * 9 * 4
 	var floor_faces := PackedVector3Array()
 	var wall_faces := PackedVector3Array()
-	surfaces = PackedByteArray()
+	var kinds := PackedByteArray()
+	var floor_cos := cos(Car.HARD_SURFACE_CHANGE)
+	var denom := maxi(tri_count, 1)
+	for i in tri_count:
+		var f := i * 9
+		var tri_a := Vector3(floats[f], floats[f + 1], floats[f + 2])
+		var tri_b := Vector3(floats[f + 3], floats[f + 4], floats[f + 5])
+		var tri_c := Vector3(floats[f + 6], floats[f + 7], floats[f + 8])
+		var n := (tri_b - tri_a).cross(tri_c - tri_a)
+		if n.length_squared() >= 1e-12:
+			if absf(n.normalized().y) >= floor_cos:
+				floor_faces.append(tri_a)
+				floor_faces.append(tri_b)
+				floor_faces.append(tri_c)
+				kinds.append(collision_bytes[surface_at + i])
+			else:
+				wall_faces.append(tri_a)
+				wall_faces.append(tri_b)
+				wall_faces.append(tri_c)
+		if (i & 2047) == 2047:
+			await Wipe.breathe(lerpf(a, b, float(i + 1) / float(denom)))
+	surfaces = kinds
+	place_collision({"floor": floor_faces, "wall": wall_faces})
+	await Wipe.breathe(b)
+
+
+func classify_collision(collision_bytes: PackedByteArray) -> Dictionary:
+	# FUN_00044a88 tests the collision-block faces. collision.bin is those faces,
+	# split the same way as the drawn quads.
+	var tri_count := collision_bytes.decode_s32(0)
+	var floats := collision_bytes.slice(4, 4 + tri_count * 9 * 4).to_float32_array()
+	var surface_at := 4 + tri_count * 9 * 4
+	var floor_faces := PackedVector3Array()
+	var wall_faces := PackedVector3Array()
+	var kinds := PackedByteArray()
 	var floor_cos := cos(Car.HARD_SURFACE_CHANGE)
 	for i in tri_count:
 		var f := i * 9
-		var a := Vector3(floats[f], floats[f + 1], floats[f + 2])
-		var b := Vector3(floats[f + 3], floats[f + 4], floats[f + 5])
-		var c := Vector3(floats[f + 6], floats[f + 7], floats[f + 8])
-		var n := (b - a).cross(c - a)
+		var tri_a := Vector3(floats[f], floats[f + 1], floats[f + 2])
+		var tri_b := Vector3(floats[f + 3], floats[f + 4], floats[f + 5])
+		var tri_c := Vector3(floats[f + 6], floats[f + 7], floats[f + 8])
+		var n := (tri_b - tri_a).cross(tri_c - tri_a)
 		if n.length_squared() < 1e-12:
 			continue
 		if absf(n.normalized().y) >= floor_cos:
-			floor_faces.append(a)
-			floor_faces.append(b)
-			floor_faces.append(c)
-			surfaces.append(collision_bytes[surface_at + i])
+			floor_faces.append(tri_a)
+			floor_faces.append(tri_b)
+			floor_faces.append(tri_c)
+			kinds.append(collision_bytes[surface_at + i])
 		else:
-			wall_faces.append(a)
-			wall_faces.append(b)
-			wall_faces.append(c)
+			wall_faces.append(tri_a)
+			wall_faces.append(tri_b)
+			wall_faces.append(tri_c)
+	surfaces = kinds
+	return {"floor": floor_faces, "wall": wall_faces}
+
+
+func place_collision(split: Dictionary) -> void:
+	var floor_faces: PackedVector3Array = split.floor
+	var wall_faces: PackedVector3Array = split.wall
 	body = add_collision(floor_faces, Car.GROUND_LAYER)
 	add_collision(wall_faces, 1)
 
@@ -198,6 +308,40 @@ func read_surface(mesh: ArrayMesh, bytes: PackedByteArray, offset: int, material
 		normals[i] = Vector3(floats[f + 3], floats[f + 4], floats[f + 5])
 		colors[i] = Color(floats[f + 6], floats[f + 7], floats[f + 8], floats[f + 9])
 		uvs[i] = Vector2(floats[f + 10], floats[f + 11])
+	if count == 0:
+		return positions
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = positions
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh.surface_set_material(mesh.get_surface_count() - 1, material)
+	return positions
+
+
+func read_surface_async(mesh: ArrayMesh, bytes: PackedByteArray, offset: int, material: Material, a: float, b: float) -> PackedVector3Array:
+	var count := bytes.decode_s32(offset)
+	var floats := bytes.slice(offset + 4, offset + 4 + count * VERTEX_FLOATS * 4).to_float32_array()
+	var positions := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var uvs := PackedVector2Array()
+	positions.resize(count)
+	normals.resize(count)
+	colors.resize(count)
+	uvs.resize(count)
+	var denom := maxi(count, 1)
+	for i in count:
+		var f := i * VERTEX_FLOATS
+		positions[i] = Vector3(floats[f], floats[f + 1], floats[f + 2])
+		normals[i] = Vector3(floats[f + 3], floats[f + 4], floats[f + 5])
+		colors[i] = Color(floats[f + 6], floats[f + 7], floats[f + 8], floats[f + 9])
+		uvs[i] = Vector2(floats[f + 10], floats[f + 11])
+		if (i & 4095) == 4095:
+			await Wipe.breathe(lerpf(a, b, float(i + 1) / float(denom)))
+	await Wipe.breathe(b)
 	if count == 0:
 		return positions
 	var arrays := []

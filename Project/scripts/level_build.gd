@@ -308,11 +308,44 @@ static func default_tileset() -> String:
 
 
 static func tileset_info(tileset: String) -> Dictionary:
+	if packed_tileset != tileset:
+		preview_meshes = {}
+		var dir := tileset_home(tileset)
+		var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("tileset.json")))
+		store_tileset(tileset, info, load_atlas(dir))
+		packed_meshes = parse_pieces(FileAccess.get_file_as_bytes(dir.path_join("pieces.bin")))
+	return packed_info
+
+
+static func load_tileset(tileset: String) -> void:
 	if packed_tileset == tileset:
-		return packed_info
+		await Wipe.breathe(1.0)
+		return
 	preview_meshes = {}
 	var dir := tileset_home(tileset)
+	await Wipe.breathe(0.02)
 	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir.path_join("tileset.json")))
+	var atlas := await load_atlas_async(dir)
+	var raw := await Wipe.read_file(dir.path_join("pieces.bin"), 0.3, 0.42)
+	var parsing := Wipe.push(0.42, 1.0)
+	packed_meshes = await parse_pieces_async(raw)
+	Wipe.pop(parsing)
+	store_tileset(tileset, info, atlas)
+	await Wipe.breathe(1.0)
+
+
+static func load_atlas_async(dir: String) -> Texture2D:
+	var path := dir.path_join("atlas.png")
+	if dir.begins_with("res://"):
+		await Wipe.breathe(0.28)
+		return load(path)
+	var raw := await Wipe.read_file(path, 0.05, 0.28)
+	var image := Image.new()
+	image.load_png_from_buffer(raw)
+	return ImageTexture.create_from_image(image)
+
+
+static func store_tileset(tileset: String, info: Dictionary, atlas: Texture2D) -> void:
 	var tiles: Array = marker_tiles()
 	for raw: Dictionary in info.tiles:
 		var mesh_id := int(raw.mesh) if raw.has("mesh") else 0
@@ -336,7 +369,7 @@ static func tileset_info(tileset: String) -> Dictionary:
 		"layer": int(info.layer),
 		"tiles": tiles,
 		"kind": "world",
-		"atlas": load_atlas(dir),
+		"atlas": atlas,
 		"markers": marker_tiles().size(),
 		"stack": bool(info.stack) if info.has("stack") else false,
 		"grid": int(info.grid) if info.has("grid") else 1,
@@ -344,8 +377,6 @@ static func tileset_info(tileset: String) -> Dictionary:
 	if info.has("ground"):
 		var channels: Array = info.ground
 		packed_info.ground = Color(float(channels[0]) / 255.0, float(channels[1]) / 255.0, float(channels[2]) / 255.0)
-	packed_meshes = parse_pieces(FileAccess.get_file_as_bytes(dir.path_join("pieces.bin")))
-	return packed_info
 
 
 static func tile_def(tileset: String, index: int) -> Dictionary:
@@ -363,25 +394,43 @@ static func cell_plane(layer: int, tileset: String) -> float:
 
 static func parse_pieces(bytes: PackedByteArray) -> Array:
 	var meshes: Array = []
-	var offset := 0
-	var count := bytes.decode_u32(offset)
-	offset += 4
+	var offset := 4
+	var count := bytes.decode_u32(0)
 	for _i in count:
-		var single := read_baked(bytes, offset)
-		offset = int(single.next)
-		var doubled := read_baked(bytes, offset)
-		offset = int(doubled.next)
-		var tris := bytes.decode_u32(offset)
-		offset += 4
-		var collision := PackedVector3Array()
-		collision.resize(tris * 3)
-		for v in tris * 3:
-			collision[v] = Vector3(bytes.decode_float(offset), bytes.decode_float(offset + 4), bytes.decode_float(offset + 8))
-			offset += 12
-		var surfaces := bytes.slice(offset, offset + tris)
-		offset += tris
-		meshes.append({"single": single, "double": doubled, "collision": collision, "surfaces": surfaces})
+		var mesh := read_mesh(bytes, offset)
+		offset = int(mesh.next)
+		meshes.append(mesh)
 	return meshes
+
+
+static func parse_pieces_async(bytes: PackedByteArray) -> Array:
+	var meshes: Array = []
+	var offset := 4
+	var count := bytes.decode_u32(0)
+	var denom := maxi(count, 1)
+	for i in count:
+		var mesh := read_mesh(bytes, offset)
+		offset = int(mesh.next)
+		meshes.append(mesh)
+		await Wipe.breathe(float(i + 1) / float(denom))
+	return meshes
+
+
+static func read_mesh(bytes: PackedByteArray, offset: int) -> Dictionary:
+	var single := read_baked(bytes, offset)
+	offset = int(single.next)
+	var doubled := read_baked(bytes, offset)
+	offset = int(doubled.next)
+	var tris := bytes.decode_u32(offset)
+	offset += 4
+	var collision := PackedVector3Array()
+	collision.resize(tris * 3)
+	for v in tris * 3:
+		collision[v] = Vector3(bytes.decode_float(offset), bytes.decode_float(offset + 4), bytes.decode_float(offset + 8))
+		offset += 12
+	var surfaces := bytes.slice(offset, offset + tris)
+	offset += tris
+	return {"single": single, "double": doubled, "collision": collision, "surfaces": surfaces, "next": offset}
 
 
 static func read_baked(bytes: PackedByteArray, offset: int) -> Dictionary:
@@ -964,11 +1013,16 @@ static func handling_preset(level: Dictionary) -> String:
 
 static func compile(level: Dictionary, dir: String) -> String:
 	var tileset := String(level.tileset)
+	var loading := Wipe.push(0.0, 0.45)
+	await load_tileset(tileset)
+	Wipe.pop(loading)
 	var loop := trace(level.parts, level.road)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
 	var built := build_nodes(level.parts, loop, tileset, level.line)
 	var grid := build_grid(level.parts, built.nodes)
-	var mesh := collect_mesh(level.parts, loop, tileset)
+	var meshing := Wipe.push(0.45, 0.9)
+	var mesh := await collect_mesh_async(level.parts, loop, tileset)
+	Wipe.pop(meshing)
 	add_ground(mesh, level.parts, level.line, tileset)
 	write_mesh(dir + "/mesh.bin", mesh)
 	write_collision(dir + "/collision.bin", mesh.collision, mesh.surfaces)
@@ -1008,6 +1062,7 @@ static func compile(level: Dictionary, dir: String) -> String:
 	}
 	var track_file := FileAccess.open(dir + "/track.json", FileAccess.WRITE)
 	track_file.store_string(JSON.stringify(data))
+	await Wipe.breathe(1.0)
 	return dir
 
 
@@ -1741,6 +1796,28 @@ static func collect_mesh(parts: Array, loop: Array, tileset: String) -> Dictiona
 			var added := int((collision.size() - before) / 3.0)
 			for _i in added:
 				surfaces.append(0)
+	return {"single": single, "double": double, "collision": collision, "surfaces": surfaces}
+
+
+static func collect_mesh_async(parts: Array, loop: Array, tileset: String) -> Dictionary:
+	var single := mesh_bucket()
+	var double := mesh_bucket()
+	var collision := PackedVector3Array()
+	var surfaces := PackedByteArray()
+	var on_loop := loop_keys(loop)
+	var open := loop.is_empty()
+	var denom := maxi(parts.size(), 1)
+	for i in parts.size():
+		var part: Dictionary = parts[i]
+		if int(part.piece) == Piece.SCENERY:
+			stamp_piece(part, tileset, single, double, collision, surfaces)
+		else:
+			var before := collision.size()
+			add_part(part, open or on_loop.has(key_part(part)), single, double, collision, tileset)
+			var added := int((collision.size() - before) / 3.0)
+			for _i in added:
+				surfaces.append(0)
+		await Wipe.breathe(float(i + 1) / float(denom))
 	return {"single": single, "double": double, "collision": collision, "surfaces": surfaces}
 
 
