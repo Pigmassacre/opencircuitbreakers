@@ -23,6 +23,7 @@ const ARROW_H := 34.0
 const HEADER_H := 96.0
 const STAGE_GAP := 48.0
 const STAGE_MAX_H := 700.0
+const CAR_BAND := 0.75
 const STAGE_FOOT := 124.0
 const FLAG_SHADER := "shader_type canvas_item;
 uniform vec2 flag_size;
@@ -192,10 +193,18 @@ func _ready() -> void:
 	if not Data.present():
 		open_setup(null)
 		return
+	if Wipe.covering:
+		Wipe.boot = open_with_backdrop
+		return
 	build_game()
 
 
-func build_game() -> void:
+func open_with_backdrop() -> void:
+	build_game(false)
+	await load_backdrop()
+
+
+func build_game(defer_backdrop := true) -> void:
 	main_page = add_page(self, "OpenCircuitBreakers", 64)
 	multiplayer_page = add_page(self, "Local Multiplayer", 48)
 	online_page = add_page(self, "Online Multiplayer", 48)
@@ -244,7 +253,8 @@ func build_game() -> void:
 	else:
 		show_page(main_page)
 	start_page = PAGE_MAIN
-	build_backdrop.call_deferred()
+	if defer_backdrop:
+		build_backdrop.call_deferred()
 
 
 func _exit_tree() -> void:
@@ -255,6 +265,8 @@ func _exit_tree() -> void:
 func _process(delta: float) -> void:
 	if setup_job != null:
 		poll_setup()
+		return
+	if page == null:
 		return
 	if page == options_page:
 		UiTheme.fit_scroll(options_scroll, options_frame, options_page.size.y - CREDITS_MARGIN * 2.0)
@@ -509,6 +521,19 @@ func dismiss_header_item(item: Control) -> void:
 
 func build_backdrop() -> void:
 	var dir := exhibition_dir()
+	var track := prepare_backdrop()
+	track.load_from(dir)
+	finish_backdrop(track, dir)
+
+
+func load_backdrop() -> void:
+	var dir := exhibition_dir()
+	var track := prepare_backdrop()
+	await track.load_async(dir)
+	finish_backdrop(track, dir)
+
+
+func prepare_backdrop() -> Track:
 	var world := Node3D.new()
 	get_parent().add_child(world)
 	get_parent().move_child(world, 0)
@@ -517,8 +542,14 @@ func build_backdrop() -> void:
 			Sound.stop_engine(car)
 	)
 	var track := Track.new()
+	track.process_mode = Node.PROCESS_MODE_DISABLED
 	world.add_child(track)
-	track.load_from(dir)
+	return track
+
+
+func finish_backdrop(track: Track, dir: String) -> void:
+	track.process_mode = Node.PROCESS_MODE_INHERIT
+	var world := track.get_parent()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = track.sky_color
@@ -2040,7 +2071,7 @@ func layout_car() -> void:
 	var height := car_stage.size.y
 	if width < 2.0 or height < 2.0:
 		return
-	var metrics := stage_metrics(width, height, 1)
+	var metrics := car_metrics(width, height)
 	var margin: float = metrics.margin
 	var slant: float = metrics.slant
 	var band: float = metrics.band
@@ -2080,7 +2111,18 @@ func layout_car() -> void:
 func draw_car_stage() -> void:
 	if car_preview == null:
 		return
-	draw_slant_stage(car_stage, [car_preview.color])
+	draw_slant_stage(car_stage, [car_preview.color], car_metrics(car_stage.size.x, car_stage.size.y))
+
+
+func car_metrics(width: float, height: float) -> Dictionary:
+	var metrics := stage_metrics(width, height, 1)
+	var band: float = metrics.band
+	var narrow := band * CAR_BAND
+	return {
+		"margin": metrics.margin + (band - narrow) * 0.5,
+		"slant": metrics.slant,
+		"band": narrow,
+	}
 
 
 func build_player_card(player: int) -> Control:
@@ -2321,13 +2363,14 @@ func draw_player_stage() -> void:
 	draw_slant_stage(player_stage, colors)
 
 
-func draw_slant_stage(canvas: Control, colors: Array) -> void:
+func draw_slant_stage(canvas: Control, colors: Array, metrics: Dictionary = {}) -> void:
 	var width := canvas.size.x
 	var height := canvas.size.y
 	if width < 2.0 or height < 2.0 or colors.is_empty():
 		return
 	var count := colors.size()
-	var metrics := stage_metrics(width, height, count)
+	if metrics.is_empty():
+		metrics = stage_metrics(width, height, count)
 	var margin: float = metrics.margin
 	var slant: float = metrics.slant
 	var band: float = metrics.band

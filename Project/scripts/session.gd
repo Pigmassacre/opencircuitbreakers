@@ -67,6 +67,7 @@ var rematch_yes := true
 var rematch_yes_button: Button
 var rematch_no_button: Button
 var rematch_scores: Array[Label] = []
+var armed := false
 
 
 static func queue_course(source: String, dir: String) -> void:
@@ -95,13 +96,13 @@ static func launch(path: String) -> void:
 
 static func play_course(path: String, dir: String) -> void:
 	Wipe.to(SCENE, func() -> void:
-		Session.queued_dir = LevelBuild.compile(LevelBuild.load_level(path), dir)
+		Session.queued_dir = await LevelBuild.compile(LevelBuild.load_level(path), dir)
 	)
 
 
 static func play_level(level: Dictionary, dir: String) -> void:
 	Wipe.to(SCENE, func() -> void:
-		Session.queued_dir = LevelBuild.compile(level, dir)
+		Session.queued_dir = await LevelBuild.compile(level, dir)
 	)
 
 
@@ -170,6 +171,28 @@ func _ready() -> void:
 				return
 		show_in_editor()
 		return
+	if Wipe.covering:
+		Wipe.boot = boot
+		return
+	arm_session()
+	build_track()
+	finish_session()
+	armed = true
+
+
+func boot() -> void:
+	arm_session()
+	track = Track.new()
+	track.process_mode = Node.PROCESS_MODE_DISABLED
+	add_child(track)
+	await track.load_async(track_dir)
+	track.process_mode = Node.PROCESS_MODE_INHERIT
+	open_track()
+	finish_session()
+	armed = true
+
+
+func arm_session() -> void:
 	Sound.race_audio = true
 	if queued_dir != "":
 		track_dir = queued_dir
@@ -177,7 +200,9 @@ func _ready() -> void:
 	elif track_dir.is_empty():
 		track_dir = remembered_track()
 	setup_input()
-	build_track()
+
+
+func finish_session() -> void:
 	build_hud()
 	for child in get_children():
 		child.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -188,7 +213,7 @@ func _ready() -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	if Engine.is_editor_hint():
+	if Engine.is_editor_hint() or not armed:
 		return
 	if get_tree().paused:
 		return
@@ -203,6 +228,8 @@ func _physics_process(_delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not armed:
+		return
 	if not event.is_action("ui_accept"):
 		return
 	if rematch.visible or not get_tree().paused:
@@ -210,6 +237,8 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not armed:
+		return
 	if rematch.visible or not event.is_action_pressed("ui_cancel"):
 		return
 	if not get_tree().paused:
@@ -224,7 +253,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
-	if Engine.is_editor_hint():
+	if Engine.is_editor_hint() or not armed:
 		return
 	apply_fog(get_viewport().get_camera_3d())
 	if pause_options.visible:
@@ -859,7 +888,10 @@ func build_track() -> void:
 	track = Track.new()
 	add_child(track)
 	track.load_from(track_dir)
+	open_track()
 
+
+func open_track() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = track.sky_color

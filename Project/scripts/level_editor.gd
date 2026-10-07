@@ -182,6 +182,7 @@ var detail_heading: Label
 var tools_panel: PanelContainer
 var tileset_panel: PanelContainer
 var details_panel: PanelContainer
+var armed := false
 var ghost_revision := ""
 var erase_revision := ""
 var grid_key := FAR_CELL
@@ -218,6 +219,39 @@ var tile_off: StyleBoxFlat
 
 
 func _ready() -> void:
+	if Wipe.covering:
+		Wipe.boot = open_async
+		return
+	open(true)
+	armed = true
+
+
+func open_async() -> void:
+	var id := tileset_to_load()
+	if id != "":
+		var loading := Wipe.push(0.0, 0.55)
+		await LevelBuild.load_tileset(id)
+		Wipe.pop(loading)
+	open(false)
+	var building := Wipe.push(0.55, 1.0)
+	await rebuild_async()
+	Wipe.pop(building)
+	await Wipe.breathe(1.0)
+	armed = true
+
+
+func tileset_to_load() -> String:
+	var id := String(level.tileset)
+	if Session.editor_return != "" and FileAccess.file_exists(LevelBuild.ACTIVE):
+		var parsed: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(LevelBuild.ACTIVE))
+		if parsed.has("tileset"):
+			id = String(parsed.tileset)
+	if not FileAccess.file_exists(LevelBuild.tileset_home(id).path_join("pieces.bin")):
+		return ""
+	return id
+
+
+func open(build_world: bool) -> void:
 	Sound.silence_race()
 	get_tree().paused = false
 	var resume := Session.editor_return != ""
@@ -239,7 +273,8 @@ func _ready() -> void:
 	apply_level_fields()
 	frame_level()
 	update_camera()
-	rebuild_world()
+	if build_world:
+		rebuild_world()
 	aim_cursor(get_viewport().get_visible_rect().size * 0.5)
 	if resume and FileAccess.file_exists(LevelBuild.ACTIVE):
 		enter_editor()
@@ -248,6 +283,8 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if not armed:
+		return
 	flush_views()
 	if notice_time > 0.0:
 		notice_time -= delta
@@ -295,6 +332,8 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not armed:
+		return
 	if menu_pad(event):
 		editor_back()
 		get_viewport().set_input_as_handled()
@@ -454,6 +493,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if not armed:
+		return
 	if blocked():
 		return
 	if event is InputEventMouseButton:
@@ -2578,21 +2619,42 @@ func paint_status() -> void:
 	message_panel.visible = message != ""
 
 
-func rebuild_world() -> void:
-	cell_visuals.clear()
+func world_groups() -> Dictionary:
 	var groups := {}
 	for part: Dictionary in level.parts:
 		var key := Vector3i(int(part.x), int(part.y), int(part.z))
 		var list: Array = groups.get(key, [])
 		list.append(part)
 		groups[key] = list
-	for key: Vector3i in groups:
-		cell_visuals[key] = LevelBuild.visual_buckets(groups[key], level.tileset, editor_tool == TOOL_LAP)
+	return groups
+
+
+func seal_world() -> void:
 	tiles_dirty = false
 	upload_world()
 	refresh_flow()
 	ghost_revision = ""
 	erase_revision = ""
+
+
+func rebuild_world() -> void:
+	cell_visuals.clear()
+	var groups := world_groups()
+	for key: Vector3i in groups:
+		cell_visuals[key] = LevelBuild.visual_buckets(groups[key], level.tileset, editor_tool == TOOL_LAP)
+	seal_world()
+
+
+func rebuild_async() -> void:
+	cell_visuals.clear()
+	var groups := world_groups()
+	var keys: Array = groups.keys()
+	var denom := maxi(keys.size(), 1)
+	for i in keys.size():
+		var key: Vector3i = keys[i]
+		cell_visuals[key] = LevelBuild.visual_buckets(groups[key], level.tileset, editor_tool == TOOL_LAP)
+		await Wipe.breathe(float(i + 1) / float(denom))
+	seal_world()
 
 
 func rebake_cell(key: Vector3i) -> void:
