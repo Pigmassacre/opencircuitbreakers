@@ -322,18 +322,22 @@ func end_pop() -> void:
 
 
 func draw_icon(texture: Texture2D, rect: Rect2, color: Color, s: float, alpha := 1.0) -> void:
+	paint_icon(self, texture, rect, color, s, alpha)
+
+
+static func paint_icon(canvas: CanvasItem, texture: Texture2D, rect: Rect2, color: Color, s: float, alpha := 1.0) -> void:
 	if alpha <= 0.0:
 		return
 	var center := rect.get_center()
 	var radius := rect.size.x * 0.52
-	draw_circle(center + SHADOW * s, radius, Color(0.0, 0.0, 0.0, 0.45 * alpha))
-	draw_circle(center, radius, Color(0.07, 0.02, 0.04, 0.84 * alpha))
-	draw_arc(center, radius, 0.0, TAU, 48, Color(color.r, color.g, color.b, 0.95 * alpha), maxf(2.5, 3.0 * s), true)
-	var previous := texture_filter
-	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	canvas.draw_circle(center + SHADOW * s, radius, Color(0.0, 0.0, 0.0, 0.45 * alpha))
+	canvas.draw_circle(center, radius, Color(0.07, 0.02, 0.04, 0.84 * alpha))
+	canvas.draw_arc(center, radius, 0.0, TAU, 48, Color(color.r, color.g, color.b, 0.95 * alpha), maxf(2.5, 3.0 * s), true)
+	var previous := canvas.texture_filter
+	canvas.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	var glyph := rect.size * 0.5
-	draw_texture_rect(texture, Rect2(center - glyph * 0.5, glyph), false, Color(color.r, color.g, color.b, alpha))
-	texture_filter = previous
+	canvas.draw_texture_rect(texture, Rect2(center - glyph * 0.5, glyph), false, Color(color.r, color.g, color.b, alpha))
+	canvas.texture_filter = previous
 
 
 func draw_lap_and_place(me: int, s: float) -> void:
@@ -556,8 +560,26 @@ func outlined(pos: Vector2, text: String, font_size: int, s: float, color := TEX
 	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, Color(color.r, color.g, color.b, alpha))
 
 
-func ordinal(n: int) -> String:
+static func ordinal(n: int) -> String:
 	var suffix := "TH"
 	if n % 100 < 11 or n % 100 > 13:
 		suffix = ["TH", "ST", "ND", "RD", "TH", "TH", "TH", "TH", "TH", "TH"][n % 10]
 	return "%d%s" % [n, suffix]
+
+
+class IconBadge extends Control:
+	var icon: Texture2D
+	var tint := Color.WHITE
+	var mark_alpha := 1.0
+
+	func _init(mark_icon: Texture2D) -> void:
+		icon = mark_icon
+		mouse_filter = MOUSE_FILTER_IGNORE
+		custom_minimum_size = Vector2(64, 64)
+		size_flags_horizontal = SIZE_SHRINK_CENTER
+		size_flags_vertical = SIZE_SHRINK_CENTER
+
+	func _draw() -> void:
+		var badge := 46.0
+		var origin := (size - Vector2(badge, badge)) * 0.5 + Vector2(-2.0, -3.0)
+		Hud.paint_icon(self, icon, Rect2(origin, Vector2(badge, badge)), tint, 1.0, mark_alpha)
