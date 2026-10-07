@@ -59,7 +59,10 @@ var stamp_x1 := 0
 var stamp_z0 := 0
 var stamp_z1 := 0
 var stamp_serial := 0
+var stamp_rot := 0
 var stamp_mesh_key := ""
+var select_count := 0
+var select_tint_key := ""
 var laying := false
 var place_from := -1
 var show_cameras := false
@@ -122,6 +125,7 @@ var cell_visuals := {}
 var tiles_dirty := false
 var ghost: MeshInstance3D
 var erase_mesh: MeshInstance3D
+var select_tint: MeshInstance3D
 var grid: MeshInstance3D
 var ground: MeshInstance3D
 var cursor_box: MeshInstance3D
@@ -316,6 +320,7 @@ func _process(delta: float) -> void:
 		refresh_road_guide()
 	if editor_tool == TOOL_SELECT:
 		refresh_stamp_ghost()
+	refresh_select_tint()
 	ghost.visible = active_tool() == TOOL_BRUSH or (editor_tool == TOOL_SELECT and not stamp.is_empty() and not select_drag)
 	if editor_tool == TOOL_CAMERA:
 		var hot := hover_node if hover_node >= 0 else camera_node
@@ -585,7 +590,7 @@ func over_ui() -> bool:
 
 func signature_now() -> String:
 	var base := "%s:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d" % [level.tileset, cursor.x, cursor.y, cursor.z, cursor_off.x, cursor_off.y, cursor_oy, brush_tile, brush_rot, brush_mirror, 1 if brush_lap else 0, editor_tool * 2 + (1 if wants_erase() else 0), level.line.size(), 1 if level.joined else 0, 1 if road_ok else 0, road_units.x, road_units.y, road_units.z, hover_node, 1 if laying else 0, span_hover.x, span_hover.y, place_from, 1 if wants_pick() else 0, hover_part, level.parts.size(), place_div, height_div]
-	return "%s:%d:%d:%d:%d:%d" % [base, 1 if select_drag else 0, select_from.x, select_from.y, select_from.z, stamp_serial]
+	return "%s:%d:%d:%d:%d:%d:%d" % [base, 1 if select_drag else 0, select_from.x, select_from.y, select_from.z, stamp_serial, stamp_rot]
 
 
 func plane_hit(screen: Vector2) -> Variant:
@@ -802,6 +807,9 @@ func turn(direction: int) -> void:
 		return
 	if editor_tool == TOOL_ROAD:
 		move_start(direction)
+		return
+	if editor_tool == TOOL_SELECT:
+		rotate_stamp(direction)
 		return
 	var tiles: Array = LevelBuild.tileset_info(level.tileset).tiles
 	var tile: Dictionary = tiles[brush_tile]
@@ -1302,6 +1310,25 @@ func capture_stamp() -> void:
 	var z0 := mini(select_from.z, cursor.z)
 	var z1 := maxi(select_from.z, cursor.z)
 	var layer := select_from.y
+	var picked := parts_inside(x0, x1, z0, z1, layer)
+	stamp = []
+	stamp_rot = 0
+	stamp_serial += 1
+	stamp_mesh_key = ""
+	if picked.is_empty():
+		flash("Nothing there")
+		return
+	var box := stamp_box(picked)
+	for src in picked:
+		stamp.append((src as Dictionary).duplicate(true))
+	stamp_x0 = int(box.x0)
+	stamp_x1 = int(box.x1)
+	stamp_z0 = int(box.z0)
+	stamp_z1 = int(box.z1)
+	stamp_anchor = Vector3i(cursor.x, layer, cursor.z)
+
+
+func parts_inside(x0: int, x1: int, z0: int, z1: int, layer: int) -> Array:
 	var picked := {}
 	for i in level.parts.size():
 		var part: Dictionary = level.parts[i]
@@ -1310,30 +1337,86 @@ func capture_stamp() -> void:
 		if int(part.x) < x0 or int(part.x) > x1 or int(part.z) < z0 or int(part.z) > z1:
 			continue
 		take_stamp(picked, i)
-	stamp = []
-	stamp_serial += 1
-	stamp_mesh_key = ""
-	if picked.is_empty():
-		flash("Nothing there")
-		return
-	var bx0 := 999999
-	var bx1 := -999999
-	var bz0 := 999999
-	var bz1 := -999999
+	var found: Array = []
 	for i in level.parts.size():
-		if not picked.has(i):
+		if picked.has(i):
+			found.append(level.parts[i])
+	return found
+
+
+func stamp_box(parts: Array) -> Dictionary:
+	var x0 := 999999
+	var x1 := -999999
+	var z0 := 999999
+	var z1 := -999999
+	for src in parts:
+		var part: Dictionary = src
+		x0 = mini(x0, int(part.x))
+		x1 = maxi(x1, int(part.x))
+		z0 = mini(z0, int(part.z))
+		z1 = maxi(z1, int(part.z))
+	return {"x0": x0, "x1": x1, "z0": z0, "z1": z1}
+
+
+func rotate_stamp(direction: int) -> void:
+	if stamp.is_empty() or select_drag:
+		return
+	stamp_rot = (stamp_rot + direction) & 3
+
+
+func oriented_stamp() -> Array:
+	var turned: Array = []
+	for src in stamp:
+		turned.append(oriented_part(src))
+	return turned
+
+
+func oriented_part(src: Dictionary) -> Dictionary:
+	var part: Dictionary = src.duplicate(true)
+	var steps := stamp_rot & 3
+	var off := LevelBuild.part_off(part)
+	var dx := int(part.x) - stamp_anchor.x
+	var dz := int(part.z) - stamp_anchor.z
+	var ox := off.x
+	var oz := off.y
+	for _i in steps:
+		var next_dx := -dz
+		var next_dz := dx
+		dx = next_dx
+		dz = next_dz
+		var next_ox := -oz
+		var next_oz := ox
+		ox = next_ox
+		oz = next_oz
+	part.x = stamp_anchor.x + dx
+	part.z = stamp_anchor.z + dz
+	if ox == 0:
+		part.erase("ox")
+	else:
+		part.ox = ox
+	if oz == 0:
+		part.erase("oz")
+	else:
+		part.oz = oz
+	part.rot = (int(part.rot) + steps) & 3
+	match_tile_rot(part)
+	return part
+
+
+func match_tile_rot(part: Dictionary) -> void:
+	var tiles: Array = LevelBuild.tileset_info(level.tileset).tiles
+	var current: Dictionary = tiles[int(part.tile)]
+	if String(current.role) == "scenery":
+		return
+	var rot := int(part.rot) & 3
+	for i in tiles.size():
+		var other: Dictionary = tiles[i]
+		if int(other.piece) != int(part.piece) or int(other.slope) != int(part.slope):
 			continue
-		var part: Dictionary = level.parts[i]
-		stamp.append(part.duplicate(true))
-		bx0 = mini(bx0, int(part.x))
-		bx1 = maxi(bx1, int(part.x))
-		bz0 = mini(bz0, int(part.z))
-		bz1 = maxi(bz1, int(part.z))
-	stamp_x0 = bx0
-	stamp_x1 = bx1
-	stamp_z0 = bz0
-	stamp_z1 = bz1
-	stamp_anchor = Vector3i(cursor.x, layer, cursor.z)
+		if (int(other.rot) & 3) != rot:
+			continue
+		part.tile = i
+		return
 
 
 func take_stamp(picked: Dictionary, index: int) -> void:
@@ -1363,11 +1446,11 @@ func place_stamp() -> void:
 	var dx := cursor.x - stamp_anchor.x
 	var dy := cursor.y - stamp_anchor.y
 	var dz := cursor.z - stamp_anchor.z
-	if dx == 0 and dy == 0 and dz == 0:
+	if dx == 0 and dy == 0 and dz == 0 and (stamp_rot & 3) == 0:
 		return
 	var stack := stacks()
-	for src in stamp:
-		var part: Dictionary = (src as Dictionary).duplicate(true)
+	for src in oriented_stamp():
+		var part: Dictionary = src
 		part.x = int(part.x) + dx
 		part.y = int(part.y) + dy
 		part.z = int(part.z) + dz
@@ -1383,6 +1466,7 @@ func place_stamp() -> void:
 
 func clear_stamp() -> void:
 	stamp = []
+	stamp_rot = 0
 	select_drag = false
 	stamp_serial += 1
 	stamp_mesh_key = ""
@@ -2563,6 +2647,8 @@ func paint_status() -> void:
 		here = "Node %d" % shown if shown >= 0 else "No node"
 	elif editor_tool == TOOL_SELECT and not stamp.is_empty() and not select_drag:
 		here = "%d tiles" % stamp.size()
+		if stamp_rot != 0:
+			here += " facing %s" % LevelBuild.facing_name(stamp_rot)
 	elif editor_tool == TOOL_PICKUP:
 		here = "No spot"
 		var spot := hover_spot
@@ -2589,11 +2675,12 @@ func paint_status() -> void:
 		elif select_drag:
 			var wide := absi(cursor.x - select_from.x) + 1
 			var deep := absi(cursor.z - select_from.z) + 1
-			message = "Selecting %d×%d" % [wide, deep]
+			var noun := "tile" if select_count == 1 else "tiles"
+			message = "Selecting %d×%d · %d %s" % [wide, deep, select_count, noun]
 		elif stamp.is_empty():
 			message = "[Drag] Select cells"
 		else:
-			message = "[Click] Place copy    [Drag] Select again"
+			message = "[Q/E] Rotate    [Click] Place copy    [Drag] Select again"
 	elif editor_tool == TOOL_PICKUP and notice_time <= 0.0:
 		if level.line.is_empty():
 			message = "Place a road first"
@@ -2767,6 +2854,51 @@ func refresh_erase() -> void:
 	erase_mesh.position = Vector3(0.0, 0.08, 0.0)
 
 
+func refresh_select_tint() -> void:
+	if editor_tool != TOOL_SELECT or (not select_drag and stamp.is_empty()):
+		select_count = 0
+		if select_tint_key != "":
+			select_tint_key = ""
+			select_tint.mesh = null
+		return
+	if select_drag:
+		var x0 := mini(select_from.x, cursor.x)
+		var x1 := maxi(select_from.x, cursor.x)
+		var z0 := mini(select_from.z, cursor.z)
+		var z1 := maxi(select_from.z, cursor.z)
+		var key := "%d:%d:%d:%d:%d:%d" % [x0, x1, z0, z1, select_from.y, level.parts.size()]
+		if key == select_tint_key:
+			return
+		var parts := parts_inside(x0, x1, z0, z1, select_from.y)
+		select_count = parts.size()
+		select_tint_key = key
+		paint_select_tint(parts)
+		return
+	select_count = stamp.size()
+	var held := "s:%d" % stamp_serial
+	if held == select_tint_key:
+		return
+	select_tint_key = held
+	paint_select_tint(stamp)
+
+
+func paint_select_tint(parts: Array) -> void:
+	if parts.is_empty():
+		select_tint.mesh = null
+		return
+	var mesh := LevelBuild.make_mesh(LevelBuild.visual_buckets(parts, level.tileset), null)
+	var material := StandardMaterial3D.new()
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.albedo_color = Color(1.0, 1.0, 0.25)
+	for surface in mesh.get_surface_count():
+		mesh.surface_set_material(surface, material)
+	select_tint.mesh = mesh
+	select_tint.position = Vector3(0.0, 0.08, 0.0)
+
+
 func rebuild_ghost() -> void:
 	ghost_revision = signature_now()
 	var spots: Array = LevelBuild.footprint_parts(level.tileset, brush_index(), cursor.x, cursor.y, cursor.z, brush_rot, brush_mirror, brush_lap, cursor_off.x, cursor_off.y, place_oy())
@@ -2793,7 +2925,7 @@ func refresh_stamp_ghost() -> void:
 		ghost.mesh = null
 		stamp_mesh_key = ""
 		return
-	var key := "%s:%d" % [level.tileset, stamp_serial]
+	var key := "%s:%d:%d" % [level.tileset, stamp_serial, stamp_rot]
 	if key != stamp_mesh_key:
 		stamp_mesh_key = key
 		rebuild_stamp_ghost()
@@ -2809,13 +2941,14 @@ func stamp_shift() -> Vector3:
 
 
 func rebuild_stamp_ghost() -> void:
-	var mesh := LevelBuild.preview_mesh(stamp, level.tileset)
+	var turned := oriented_stamp()
+	var mesh := LevelBuild.preview_mesh(turned, level.tileset)
 	for surface in mesh.get_surface_count():
 		var material := (mesh.surface_get_material(surface) as StandardMaterial3D).duplicate()
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		material.albedo_color = Color(material.albedo_color, 0.9)
 		mesh.surface_set_material(surface, material)
-	var arrows := LevelBuild.flow_mesh(stamp, level.tileset)
+	var arrows := LevelBuild.flow_mesh(turned, level.tileset)
 	var flow_material := StandardMaterial3D.new()
 	flow_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	flow_material.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -2965,8 +3098,9 @@ func rebuild_select_cursor() -> void:
 		var dx := cursor.x - stamp_anchor.x
 		var dy := cursor.y - stamp_anchor.y
 		var dz := cursor.z - stamp_anchor.z
-		if dx != 0 or dy != 0 or dz != 0:
-			add_rect(lines, stamp_x0 + dx, stamp_z0 + dz, stamp_x1 + dx, stamp_z1 + dz, cursor.y, gold, 0.14)
+		var box := stamp_box(oriented_stamp())
+		if dx != 0 or dy != 0 or dz != 0 or (stamp_rot & 3) != 0:
+			add_rect(lines, int(box.x0) + dx, int(box.z0) + dz, int(box.x1) + dx, int(box.z1) + dz, cursor.y, gold, 0.14)
 	else:
 		add_rect(lines, cursor.x, cursor.z, cursor.x, cursor.z, cursor.y, gold, 0.1)
 	cursor_box.mesh = lines.commit()
@@ -3073,6 +3207,9 @@ func build_view() -> void:
 	erase_mesh = MeshInstance3D.new()
 	erase_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(erase_mesh)
+	select_tint = MeshInstance3D.new()
+	select_tint.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(select_tint)
 	grid = line_mesh()
 	add_child(grid)
 	cursor_box = line_mesh()
