@@ -41,6 +41,8 @@ const GROUND_SNAP := 0x12 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
 const GROUND_SNAP_RISING := 4 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
 const GROUND_SNAP_LOOSE := 1 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
 const GROUND_STEP := 0x20 * UNIT_METRES
+const STEP_EDGE_REACH := 0.05
+const STEP_EDGE_FACING := 0.5
 # The original moves in steps of at most 16 units along the dominant axis and
 # snaps to the ground after each one.
 const MOTION_STEP := 16.0
@@ -483,9 +485,10 @@ func _physics_process(_delta: float) -> void:
 		update_shape()
 
 	var was_grounded := grounded
+	var from := global_position
 	velocity = vel * FIXED_TO_MPS
 	move_and_slide()
-	resolve_collisions()
+	resolve_collisions(from)
 
 	if held:
 		grounded = wreck_frames == 0
@@ -568,6 +571,9 @@ func game_frame() -> void:
 	elif player_controlled:
 		fire_input = Input.is_action_pressed("fire_item" + controls)
 		cycle_input = Input.is_action_pressed("cycle_item" + controls)
+	if player_controlled and finished():
+		fire_input = false
+		cycle_input = false
 	if autopilot_enabled:
 		autopilot.restore_handling(self)
 	if items:
@@ -646,6 +652,10 @@ func game_frame() -> void:
 		steer_input = roundi(Input.get_axis("steer_left" + controls, "steer_right" + controls) * 7.0)
 	if forced_accel and not autopilot_enabled:
 		accel_input = 7
+		brake_input = 0
+		steer_input = 0
+	if not autopilot_enabled and finished():
+		accel_input = 0
 		brake_input = 0
 		steer_input = 0
 	if items.race.time_trial and not replay and (player_controlled or net_driven):
@@ -759,6 +769,16 @@ func game_frame() -> void:
 	frame_rumble(spd, travel)
 	Sound.car_frame(self)
 	Fx.car_frame(self)
+
+
+# A car that has crossed the line on its last lap. Its pad no longer drives it,
+# so it coasts to a stop.
+func finished() -> bool:
+	if items == null or battle:
+		return false
+	var race := items.race
+	var me := race.cars.find(self)
+	return me >= 0 and race.finish_time[me] >= 0.0
 
 
 # The throttle FUN_0003a330 sees this frame. A staged car has not read its pad.
@@ -1048,8 +1068,9 @@ func probe_ground(was_grounded: bool) -> Dictionary:
 	return {}
 
 
-func resolve_collisions() -> void:
+func resolve_collisions(from: Vector3) -> void:
 	var bounced := false
+	var stepped := false
 	var ground_up := floor_normal if grounded else Vector3.UP
 	for i in get_slide_collision_count():
 		var collision := get_slide_collision(i)
@@ -1057,9 +1078,30 @@ func resolve_collisions() -> void:
 		var other := collision.get_collider()
 		if other is RigidBody3D:
 			push_prop(other, n)
+		elif step_edge(collision.get_position(), n):
+			stepped = true
 		elif not bounced and n.angle_to(ground_up) > HARD_SURFACE_CHANGE:
 			bounce_off_wall(n)
 			bounced = true
+	if stepped and not bounced:
+		global_position = from + vel * FIXED_TO_MPS * get_physics_process_delta_time()
+
+
+# The body running into the rim of a floor that reaches it from the car's side,
+# as the lip of a jump ramp does. The original samples the car at a point, which
+# is level with that rim when it gets there, so the wall face under the rim must
+# not stop the body. A kerb met from below has no floor on this side and stays a
+# wall, and a rim the body only rests on does not face the travel.
+func step_edge(at: Vector3, n: Vector3) -> bool:
+	if at.y - global_position.y > GROUND_STEP + STEP_EDGE_REACH:
+		return false
+	var facing := Vector3(n.x, 0.0, n.z)
+	if facing.dot(Vector3(vel.x, 0.0, vel.z).normalized()) > -STEP_EDGE_FACING:
+		return false
+	var near := at + facing.normalized() * STEP_EDGE_REACH
+	var reach := Vector3.UP * STEP_EDGE_REACH * 2.0
+	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(near + reach, near - reach, GROUND_LAYER))
+	return not hit.is_empty() and hit.normal.angle_to(Vector3.UP) <= HARD_SURFACE_CHANGE
 
 
 func bounce_off_wall(n: Vector3) -> void:

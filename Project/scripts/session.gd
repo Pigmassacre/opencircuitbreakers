@@ -22,6 +22,7 @@ static var trial_models := PackedInt32Array()
 static var trial_controls := PackedStringArray()
 static var ghost_model := -1
 static var editor_return := ""
+static var names := {}
 
 @export var track_dir := "":
 	set(value):
@@ -148,7 +149,8 @@ static func title(dir: String) -> String:
 	if dir.begins_with("user://"):
 		var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir + "/track.json"))
 		return String(info.name)
-	var names: Dictionary = JSON.parse_string(Data.text("res://tracks/names.json"))
+	if names.is_empty():
+		names = JSON.parse_string(Data.text("res://tracks/names.json"))
 	var text: String = names[dir]
 	if describe(dir).reverse:
 		text += " Reverse"
@@ -570,6 +572,8 @@ func build_pause_menu() -> void:
 	pause_column.add_child(track_name)
 
 	resume = pause_button(pause_column, "Resume", set_paused.bind(false))
+	if not battle and not Net.in_match:
+		pause_button(pause_column, "Restart", prompt_restart)
 	pause_button(pause_column, "Options", show_pause_options)
 	pause_button(pause_column, "Return to %s" % return_place(), prompt_leave)
 	var gap := Control.new()
@@ -712,6 +716,15 @@ func prompt_leave() -> void:
 		return
 	var place := return_place()
 	open_pause_ask("Return to %s?" % place, "This race will end.", "Return", leave)
+
+
+func prompt_restart() -> void:
+	open_pause_ask("Restart?", "This race will start over.", "Restart", restart)
+
+
+func restart() -> void:
+	race_returning = true
+	Sound.depart(func() -> void: play(track_dir))
 
 
 func prompt_quit() -> void:

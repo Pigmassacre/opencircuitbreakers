@@ -126,6 +126,9 @@ var track_scroll: ScrollContainer
 var track_tab_courses: Button
 var track_tab_custom: Button
 var track_reveal := false
+var track_catalog := {}
+var track_listed_race := false
+var track_listed_tab := -1
 var track_pivot: Node3D
 var track_camera: Camera3D
 var track_environment: Environment
@@ -202,15 +205,36 @@ func _ready() -> void:
 	if Wipe.covering:
 		Wipe.boot = open_with_backdrop
 		return
-	build_game()
+	Wipe.open(open_with_backdrop)
 
 
 func open_with_backdrop() -> void:
-	build_game(false)
+	build_game()
+	var loading := Wipe.push(0.0, 0.94)
 	await load_backdrop()
+	Wipe.pop(loading)
+	await warm_pages()
 
 
-func build_game(defer_backdrop := true) -> void:
+# Shows every page for a few frames behind the cover, so its fonts, meshes and
+# shaders are ready before the player first opens it.
+func warm_pages() -> void:
+	if page != track_page:
+		fill_tracks(true)
+	var warmed: Array[Control] = []
+	for column: VBoxContainer in [multiplayer_page, online_page, car_page, track_page, mode_page, options_page, credits_page]:
+		var shell: Control = column.get_meta("shell")
+		if not shell.visible:
+			shell.visible = true
+			warmed.append(shell)
+	for _i in 3:
+		await get_tree().process_frame
+	for shell in warmed:
+		if shell != page.get_meta("shell"):
+			shell.visible = false
+
+
+func build_game() -> void:
 	main_page = add_page(self, "OpenCircuitBreakers", 64)
 	multiplayer_page = add_page(self, "Local Multiplayer", 48)
 	online_page = add_page(self, "Online Multiplayer", 48)
@@ -259,8 +283,6 @@ func build_game(defer_backdrop := true) -> void:
 	else:
 		show_page(main_page)
 	start_page = PAGE_MAIN
-	if defer_backdrop:
-		build_backdrop.call_deferred()
 
 
 func _exit_tree() -> void:
@@ -523,13 +545,6 @@ func dismiss_header_item(item: Control) -> void:
 		item.offset_left = rest_left
 		item.offset_right = rest_right
 	)
-
-
-func build_backdrop() -> void:
-	var dir := exhibition_dir()
-	var track := prepare_backdrop()
-	track.load_from(dir)
-	finish_backdrop(track, dir)
 
 
 func load_backdrop() -> void:
@@ -836,6 +851,9 @@ func poll_setup() -> void:
 		return
 	Sound.boot()
 	Fx.boot()
+	Session.names = {}
+	track_catalog.clear()
+	track_listed_tab = -1
 	if setup_return != null:
 		setup_status.text = "Waiting for data..."
 		setup_bar.value = 0.0
@@ -852,7 +870,7 @@ func poll_setup() -> void:
 	page = null
 	setup_page = null
 	shell.queue_free()
-	build_game()
+	Wipe.open(open_with_backdrop)
 
 
 func race_groups() -> Array:
@@ -1615,18 +1633,22 @@ func best_caption(dir: String) -> String:
 	return "%s\nPlace %d/%d" % [caption, place, Settings.best_field(dir)]
 
 
-func fill_tracks(race: bool) -> void:
-	track_paths.clear()
-	track_names.clear()
-	track_groups.clear()
+# The stock courses and the saved custom ones for one kind of list. Reading
+# them is slow, so it happens once and every later visit to the page reuses it.
+func catalog(race: bool) -> Dictionary:
+	if track_catalog.has(race):
+		return track_catalog[race]
+	var paths: Array[String] = []
+	var names: Array[String] = []
+	var groups: Array[int] = []
 	if race:
 		for group: Dictionary in race_groups():
 			for dir: String in group.tracks:
 				if not Data.exists(dir + "/track.json"):
 					continue
-				track_paths.append(dir)
-				track_names.append(Session.title(dir))
-				track_groups.append(int(group.group))
+				paths.append(dir)
+				names.append(Session.title(dir))
+				groups.append(int(group.group))
 	else:
 		for world: String in WORLDS:
 			for number in range(1, 5):
@@ -1634,13 +1656,22 @@ func fill_tracks(race: bool) -> void:
 					var dir := Session.directory(world, number, reverse)
 					if not Data.exists(dir + "/track.json"):
 						continue
-					track_paths.append(dir)
-					track_names.append(Session.title(dir))
-					track_groups.append(0)
+					paths.append(dir)
+					names.append(Session.title(dir))
+					groups.append(0)
 	for saved: Dictionary in LevelBuild.list_playable():
-		track_paths.append(String(saved.path))
-		track_names.append(String(saved.name))
-		track_groups.append(-1)
+		paths.append(String(saved.path))
+		names.append(String(saved.name))
+		groups.append(-1)
+	track_catalog[race] = {"paths": paths, "names": names, "groups": groups}
+	return track_catalog[race]
+
+
+func fill_tracks(race: bool) -> void:
+	var listed := catalog(race)
+	track_paths.assign(listed.paths)
+	track_names.assign(listed.names)
+	track_groups.assign(listed.groups)
 	var index := race_track if race else battle_track
 	if index >= track_paths.size():
 		index = 0
@@ -1653,7 +1684,9 @@ func fill_tracks(race: bool) -> void:
 	listed_pick[1] = first_in_tab(1)
 	listed_pick[track_tab] = index
 	paint_track_tabs()
-	rebuild_track_list()
+	if race != track_listed_race or track_tab != track_listed_tab:
+		track_listed_race = race
+		rebuild_track_list()
 	show_track(index)
 
 
@@ -1775,6 +1808,9 @@ func rebuild_track_list() -> void:
 		child.free()
 	var rows := ButtonGroup.new()
 	rows.allow_unpress = false
+	var normal := list_row_style(Color(0.86, 0.15, 0.46, 0.28), Color(0.86, 0.15, 0.46, 0.0))
+	var lit := list_row_style(Color(0.86, 0.15, 0.46, 0.72), UiTheme.CREAM)
+	var picked := list_row_style(UiTheme.CREAM, UiTheme.CORAL)
 	var last_group := 0
 	var any := false
 	var index := battle_track if track_for_battle or track_for_online else race_track
@@ -1805,11 +1841,11 @@ func rebuild_track_list() -> void:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size = Vector2(0, 44)
 		button.add_theme_font_size_override("font_size", 20)
-		button.add_theme_stylebox_override("normal", list_row_style(Color(0.86, 0.15, 0.46, 0.28), Color(0.86, 0.15, 0.46, 0.0)))
-		button.add_theme_stylebox_override("hover", list_row_style(Color(0.86, 0.15, 0.46, 0.72), UiTheme.CREAM))
-		button.add_theme_stylebox_override("pressed", list_row_style(UiTheme.CREAM, UiTheme.CORAL))
-		button.add_theme_stylebox_override("hover_pressed", list_row_style(UiTheme.CREAM, UiTheme.CORAL))
-		button.add_theme_stylebox_override("focus", list_row_style(Color(0.86, 0.15, 0.46, 0.72), UiTheme.CREAM))
+		button.add_theme_stylebox_override("normal", normal)
+		button.add_theme_stylebox_override("hover", lit)
+		button.add_theme_stylebox_override("pressed", picked)
+		button.add_theme_stylebox_override("hover_pressed", picked)
+		button.add_theme_stylebox_override("focus", lit)
 		button.set_meta("index", i)
 		button.set_pressed_no_signal(i == index)
 		button.pressed.connect(select_listed.bind(i))
@@ -1821,6 +1857,7 @@ func rebuild_track_list() -> void:
 		empty.add_theme_font_size_override("font_size", 20)
 		empty.add_theme_color_override("font_color", UiTheme.CREAM)
 		track_list.add_child(empty)
+	track_listed_tab = track_tab
 	track_reveal = true
 
 

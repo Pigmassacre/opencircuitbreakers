@@ -93,6 +93,33 @@ func to(path: String, during: Callable = Callable()) -> void:
 		lo = shown
 		hi = 1.0
 		await job.call()
+	await reveal(width)
+
+
+# The launch has no scene to sweep over, so the cover starts closed.
+func open(job: Callable) -> void:
+	if busy:
+		return
+	busy = true
+	covering = true
+	boot = Callable()
+	block.visible = true
+	shade.visible = true
+	var width := get_viewport().get_visible_rect().size.x
+	shade.offset_left = 0.0
+	shade.offset_right = width
+	shown = 0.0
+	lo = 0.0
+	hi = 1.0
+	clock = Time.get_ticks_msec()
+	percent.text = "0%"
+	percent.visible = true
+	await get_tree().process_frame
+	await job.call()
+	await reveal(width)
+
+
+func reveal(width: float) -> void:
 	lo = 0.0
 	hi = 1.0
 	report(1.0)

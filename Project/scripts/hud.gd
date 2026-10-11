@@ -290,9 +290,6 @@ func draw_finish(me: int, s: float) -> void:
 			end_pop()
 		x += place_col
 		if race.new_best:
-			var div_x := x + col_gap * 0.5
-			var line_alpha := clampf((finish_mark - 0.05) / 0.3, 0.0, 1.0)
-			draw_line(Vector2(div_x, badge_y + 8.0 * s), Vector2(div_x, badge_y + stats_h - 4.0 * s), Color(1, 1, 1, 0.28 * line_alpha), maxf(2.0, 2.0 * s))
 			x += col_gap
 	if race.new_best:
 		var mark_alpha := begin_pop(Vector2(x + time_col * 0.5, badge_y + stats_h * 0.5), finish_mark, s)
