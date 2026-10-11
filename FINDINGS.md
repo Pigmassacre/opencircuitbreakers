@@ -6,7 +6,7 @@ Addresses are functions in the PS1 executable `SLUS_006.97`. A Ghidra address is
 
 ## Units and frames
 
-The original simulation runs at 30 Hz. The port subdivides each of those game frames into 4 physics ticks.
+The original simulation runs at 30 Hz. The port subdivides each of those game frames into 4 physics ticks. A car moves once a game frame, as in the original, and the ticks in between draw it on its way to where that frame left it.
 
 - `4096` is one world unit, and also one full turn (`4096 = 360°`).
 - Velocities are fixed-point world units per game frame.
@@ -51,13 +51,46 @@ Record 8 is drawn through `FUN_00024218` with the car index as its shade argumen
 
 `FUN_00024bc4` arms the countdown (`DAT_000a647c = 0x14`) for every start, battles included. `FUN_0003a330` holds every car for the whole countdown unless one human races outside a time trial.
 
+## Car update
+
+`car_sim.gd` is the physics of `FUN_0003a330` and the functions it calls, in the original's integers: the same shifts, the same rounding, and the library's own sine, arctangent, square root and matrix routines (`fixed.gd`). `car.gd` copies its state in before a game frame and back out after it. Run from a recorded state of the original with the recorded pad, it gives the next recorded state exactly; see "Checking against the original".
+
+The order within a frame: the off-track checks, the body points, speed, throttle, steering, heading settle, thrust laid on the slope, drag and rolling loss, tyre grip across and along, slope pull or gravity, the shove from bumps, the stepped motion, then the travel heading and the speed re-laid along the floor when the tilt changed or a wall was hit.
+
+Things that are easy to get wrong:
+
+- With no steering the heading settles on the nearest eighth of a turn, 12 a frame, and the bands are not symmetric about an axis.
+- A car only turns when `FUN_0003fbb8` finds no wall within reach of the three body points on the side that swings out. A wall there cancels the turn, moves the car 2 units off, adds 16 units of shove and sets the wall count to 8, which cuts the throttle.
+- The frames since the wheel was last turned (`car+0x188`) raise the sideways grip to 8 a frame, up to `0x60`. The count runs on every call, also while wrecked or waiting for the start.
+- A negative shove of `0x4000` or less is subtracted, so it moves the car the other way.
+- A wall hit turns the speed about the wall's level heading and keeps between a quarter and all of it, the squarer the less. Speed below `0x2000` is doubled up to that first and the result is never scaled by less than 3, so a slow car still comes off a wall at about 6 units a frame.
+- A second wall hit or hard landing in one frame stops the motion for that frame.
+- `FUN_000388c4` places a car with its node's tilt and nothing else. The floor normal and fall line stay as they were, and the first frame's slope pull uses them.
+- The rest rule (no pedals, speed below `0x40` on level ground or `0x10` on a slope) reads both tilts.
+
+`FUN_0002a824` starts the wreck count at 1, each later update adds one, and the car is placed again in the update that reaches `0x1e`. A wreck raised at the top of the update (the out-of-bounds floor, surface 2) is counted in that same update.
+
+Two wrecks come from where the car is over the track, before it moves. A car that is car 0, or any car with several humans or in a time trial, is wrecked unless some layer has a face in the bucket under it that the car is over, or less than `0x20` under (`FUN_00044a88` gives the lowest such face of a cell). A car in the air is wrecked once it is `0x14` under the highest face of the highest layer that has one (`FUN_000443b8`), while it is less than `0x40` under or below height 8.
+
 ## Collision blocks
 
-Each cell of the track grid is a 512-unit cube that names a piece and two mirror bits. A piece's collision block is a vertex pointer, sixteen face lists for a 4 by 4 grid of 128-unit buckets (triangles up to `0xff`, then quads up to `0xff`), and the face pointers. A vertex is 20 bytes starting `[-y, height, -x]`, with height running down from the middle of the cell. A face is its vertex indices, then the x tilt at `+4`, the y tilt at `+6`, the heading of its level normal at `+8`, the normal `[y, height, x]` at `+0xc`, and the surface in the high byte of the word at `-2`.
+Each cell of the track grid is a 512-unit cube that names a piece and two mirror bits: bit 0 mirrors x, bit 1 y. A piece's collision block is a vertex pointer, sixteen face lists for a 4 by 4 grid of 128-unit buckets (triangles up to `0xff`, then quads up to `0xff`), and the face pointers. A vertex is 20 bytes starting `[-y, height, -x]`, with height running down from the middle of the cell. A face is its vertex indices, then the x tilt at `+4`, the y tilt at `+6`, the heading its normal leans toward at `+8`, a heading offset at `+0xa`, the normal `[y, height, x]` at `+0xc`, its steepness at `+0x12`, and the surface in the high byte of the word at `-2`. The cell under a point is `(x + offset) >> 21` in fixed point, where the offsets (`_DAT_000a7020`, `_DAT_000a7308`) are half the grid.
 
-`FUN_0003f31c` is the floor under the car's ground point: the first face of the point's cell that holds the point from above and lies above the car by less than `0x20` and below it by at most `_DAT_1f8001b0` (`0x12`, 4 while rising, 1 on the loose surface). `car.gd` `probe_ground` casts that as a ray.
+The numbers beside a face follow from its normal: a tilt is the arctangent of `FUN_00080918` of that part over the height part, plus half a turn under an overhang; the heading is the same arctangent of y over x; the offset is `sin(tilt x) * tilt y * cos(tilt y)`. The normals themselves were made from the models before the vertices were rounded and are not unit length, so they cannot be had back from the vertices. The exporter therefore writes the blocks as they are (`blocks.bin`, `collision_blocks.gd` `read`). A level from the editor has only triangles, and `build` makes blocks of those with the rules above: a face is listed in every cell and bucket it reaches into, not in one it only touches, and a quad is two triangles `[a, b, c]`, `[b, d, c]` joined again.
 
-The wall tests are `FUN_00040128` (down x), `FUN_00040f7c` (up x), `FUN_00041db8` (down y) and `FUN_00042cf0` (up y). `FUN_0003a330` calls one after each step along that axis. Each takes four of the six points of `FUN_0003a000`, looks up the cell the point is in, and asks of each face there whether the point lies within it seen along the axis, and has passed it by no more than the step plus a unit. Because the cell comes from the point, a face only counts for points in its own layer, and a point level with the top of a layer is in the layer above. That is why the lip of a jump ramp that ends at the top of its cell does not stop a car driving up to it: the points sit `0x20` above the ground, exactly level with the lip. When no face is found and the point is within 16 units of a bucket edge behind it, the next bucket, or the next cell along the axis, is tried too.
+For a mirrored cell the original turns the point instead of the piece, and turns the numbers of the face it finds: mirroring x negates the x tilt, the normal's x and the offset, and makes the heading `0x800 - heading` for the floor and `-heading` for the wall tests; mirroring y negates the y tilt, the normal's y and the offset, and the heading. The port turns each piece once for every way it is used, and keeps the mirror bits only to pick the bucket the original would for a point on a bucket edge.
+
+`FUN_0003f31c` is the floor under the car's ground point: the first face of the point's bucket that holds the point from above and lies above the car by less than `0x20` and below it by at most `_DAT_1f8001b0` (`0x12`, 4 while rising off the ground, 1 on the loose surface). A point within 16 units of the bottom or top of its cell is also tried in the cell below or above.
+
+The wall tests are `FUN_00040128` (down x), `FUN_00040f7c` (up x), `FUN_00041db8` (down y) and `FUN_00042cf0` (up y). `FUN_0003a330` calls one after each step along that axis. Each takes four of the six points of `FUN_0003a000`, looks up the cell the point is in, and asks of each face there: does it lean more than `0x200` from the car's own tilt along the axis, does the point lie within it seen along the axis, has the point passed it by no more than the step plus a unit, and is the point on the side of the car that faces it. Because the cell comes from the point, a face only counts for points in its own layer, and a point level with the top of a layer is in the layer above. That is why the lip of a jump ramp that ends at the top of its cell does not stop a car driving up to it: the points sit `0x20` above the ground, exactly level with the lip. A point within 16 units past a bucket edge also looks in the bucket behind it, in the cell behind when that was a cell edge, and it does so even when its own cell is empty.
+
+## Checking against the original
+
+DuckStation has a GDB server (`EnableGDBServer` under `[Debug]`). `Tools/compare` drives the original through it: a breakpoint on the pad read (`0x80031a58`, raw buttons at `0xbf736`) presses buttons to get into a race, and a breakpoint on car 0's call of `FUN_00039a6c` in the race loop (`0x80027214`) writes the pad word at `car+0xc4` and saves the car record, once a game frame. `simtest.gd` then runs `CarSim` one frame from every saved record and compares with the next, and `replay.gd` plays the same pad tape through a time trial of the port.
+
+A car record is `0x210` bytes at `0x1f75c0`. Wreck count `+0`, appear count `+8`, wall count `+0xc`, position `+0x14`, tilts and fall line `+0x4c`, normal `[y, height, x]` `+0x5c`, shove `+0x64`, grounded `+0x74`, frames in the air `+0x7c`, speed `+0x84` (vector) and `+0x94`, heading `+0x9e`, heading offset `+0xa4`, travel heading `+0xa8`, drag, grip and engine `+0xac`, brake `+0xb8`, turn rate `+0xc0`, pad `+0xc4`, node `+0xd8`, last ground height `+0x10c`, surface `+0x17e`, steer counts `+0x180`, frames unsteered `+0x188`, boost `+0x18c`, throttle ramp `+0x190`, script hold `+0x19c`. The nodes are `0x24` bytes each at the pointer in `_DAT_000a6e88`.
+
+The menu's Jungle 1 is the folder `jungle4`; `names.json` has the rest.
 
 ## Front end
 
@@ -77,13 +110,7 @@ The wall tests are `FUN_00040128` (down x), `FUN_00040f7c` (up x), `FUN_00041db8
 
 The tournament milestone celebration is not ported. When car 0 finishes having won every race of the world (`_DAT_000a6b1c`) and `FUN_0005c1e8`'s completion percentage (`_DAT_000a6b70`, top-three points over the maximum) is exactly 50 or 100, `_DAT_000a6fd8` takes that value. `FUN_00037b44` then eases the camera into a flyby and `FUN_0002aec4` drops type `0x4e` particles a few nodes behind car 0. `FUN_00072160` plays program 1 tone `0xf` at a random note instead of the respawn tone, and `FUN_00029b54` ends the sequence. The port keeps best places but has no completion percentage.
 
-The port keeps positions as floats and casts the wall tests as rays over the exported triangles, so it does not repeat the bucket lookups, and a face in the next cell along x or y counts wherever the ray meets it. Only the layer of a face is kept.
-
-`FUN_0003f31c` accepts any face that is not vertical. The port splits `collision.bin` into floor and wall bodies at a lean of `0x281` and only lands on the floor body.
-
-`FUN_00043c1c` turns the speed about the heading of the wall's level normal. The port's `bounce_off_wall` mirrors it in the whole normal, which is the same for an upright wall.
-
-`FUN_00044a88` returns `0x100` less the highest face over a point of a cell. Its one caller is early in `FUN_0003a330`; what that is for is not worked out.
+The opponent branches of the car update (steer ramp, heading settle, pedal rules) and water, ice, mud, spins and the start boost follow the decompile but have not been run against a recording of the original. Neither have blocks built from triangles; on an original track they differ from the disc's by a unit here and there in the normals.
 
 ## Function index
 
@@ -127,16 +154,17 @@ The port keeps positions as floats and casts the wall tests as rays over the exp
 | `FUN_00037d64` | `track.gd` `cell_kind`, `race.gd` `complete_lap` | Cell kind and lap logic |
 | `FUN_000381d8` | `track.gd` `lookup_node` | Node under a point |
 | `FUN_00038418` | `track.gd` `search_gate` | Gate search |
-| `FUN_000388c4` | `track.gd` `lane_height`, `battle.gd` `grid_slot` | Lane placement, respawn clear, battle grid |
+| `FUN_000388c4` | `track.gd` `lane_height`, `battle.gd` `grid_slot`, `car.gd` `teleport`, `load_sim` | Lane placement, respawn clear, battle grid |
 | `FUN_000398c4` | `battle.gd` `set_back` | Expert battle respawn, two nodes back |
 | `FUN_00039a6c` | `car.gd` `walls_ignored` | Car update set-up; AI cars near the middle of a wide gate skip the wall tests |
-| `FUN_0003a000` | `car.gd` `WALL_POINTS` | The six body points the wall tests use |
-| `FUN_0003a330` | `car.gd` `game_frame`, `step_motion`, `leading_point`, `listener_distance`, `frame_rumble`, `check_start_boost`, `start_boost`, `race.gd` `refresh_staged` | Car update, stepped motion, bump shove, pickup collection, start hold, start boost |
-| `FUN_0003ea8c` | `car.gd` `land` | Landing, pattern 4 |
-| `FUN_0003f31c` | `car.gd` `probe_ground`, `ground_contact` | Floor under the ground point |
-| `FUN_0003fbb8` | `car.gd` `spin_out` | Spin; pattern 8 on car 1's pad |
-| `FUN_00040128`, `FUN_00040f7c`, `FUN_00041db8`, `FUN_00042cf0` | `car.gd` `wall_hit`, `is_wall` | Wall test after a step down x, up x, down y, up y |
-| `FUN_00043c1c` | `car.gd` `bounce_off_wall`, `wall_rumble` | Wall hit |
+| `FUN_0003a000` | `car_sim.gd` `place_points` | The six body points the wall tests use |
+| `FUN_0003a330` | `car.gd` `game_frame`, `listener_distance`, `frame_rumble`, `check_start_boost`, `start_boost`, `car_sim.gd` `frame`, `throttle`, `turn_wheel`, `settle_heading`, `tyres`, `travel_frame`, `check_column`, `race.gd` `refresh_staged` | Car update, stepped motion, bump shove, pickup collection, start hold, start boost |
+| `FUN_0003ea8c` | `car_sim.gd` `land` | Landing, pattern 4 |
+| `FUN_0003f31c` | `car_sim.gd` `floor_in` | Floor under the ground point |
+| `FUN_0003fbb8` | `car_sim.gd` `can_turn` | Is a wall in reach of the side that swings out |
+| `FUN_00040128`, `FUN_00040f7c`, `FUN_00041db8`, `FUN_00042cf0` | `car_sim.gd` `wall_x`, `wall_y` | Wall test after a step down x, up x, down y, up y |
+| `FUN_00043c1c` | `car_sim.gd` `bounce`, `car.gd` `wall_rumble` | Wall hit |
+| `FUN_000443b8`, `FUN_00044a88` | `car_sim.gd` `column_edge` | Highest and lowest face over a point of a cell |
 | `FUN_00055084` | `items.gd` `spawn_table`, `car.gd` `bump_pass` | Place the pickup, then bump every car pair |
 | `FUN_00056348` | `car.gd` `bump_pair` | Car-car bump |
 | `FUN_00056cf0` | `items.gd` `run_item` | Fired item, every frame |
@@ -200,6 +228,10 @@ The port keeps positions as floats and casts the wall tests as rays over the exp
 | `FUN_00074d00` | `sound.gd` `sub_engine` | Submarine engine voice |
 | `FUN_00075118` | `sound.gd` `countdown_beep` | Countdown beeps |
 | `FUN_00075e3c` | not ported | `CdGetToc2`; song 0 is CD track 2 |
+| `FUN_00080398`, `FUN_00080468`, `FUN_000806b8` | `fixed.gd` `rsin`, `rcos`, `csin` | Sine and cosine |
+| `FUN_00080918` | `fixed.gd` `atan_ratio` | Arctangent of a ratio |
+| `FUN_00080a78`, `FUN_00080ba8` | `fixed.gd` `root`, `normal` | Square root, vector to unit length |
+| `FUN_00081248` | `fixed.gd` `matrix` | Rotation matrix |
 | `FUN_00084834` | `sound.gd` `set_level` | SPU voice volume, `volume * 0x81` |
 | `FUN_0008525c` | `sound.gd` `note_pitch` | Note to SPU pitch |
 | `FUN_000858f4` | `sound.gd` `spu_amplitude` | One-shot SPU level |

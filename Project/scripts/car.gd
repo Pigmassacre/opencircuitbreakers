@@ -4,26 +4,20 @@ extends CharacterBody3D
 # Port of the car update in the PS1 executable (SLUS_006.97, FUN_0003a330).
 # Internal state uses the original units: 4096 = one world unit, velocities are
 # fixed-point world units per 30 Hz game frame, angles are 12-bit (4096 = 360°).
+# The physics of that update, from the throttle to the landing, is CarSim; this
+# script is everything around it.
 
 const UNIT_METRES := 2.4 / 158.0
 const ONE := 4096.0
 const FIXED_TO_MPS := UNIT_METRES * 30.0 / ONE
 const ANGLE_TO_RAD := TAU / 4096.0
-const GRAVITY := 0x3000
-const ROLLING_FRICTION := 0x80
-const ROLLING_STOP := 0x100
-const WRECK_FRAMES := 30
-const MAX_SAFE_DROP := 0x80000 / ONE * UNIT_METRES
+# FUN_0002a824 starts the wreck count at 1 and FUN_0003a330 puts the car back
+# when it reaches 0x1e. wreck_frames is what is left of that.
+const WRECK_FRAMES := 29
 const HARD_SURFACE_CHANGE := 0x281 * ANGLE_TO_RAD
-const STEEP_IMPACT := -0x600 / ONE
-const BOUNCE_SPEED := 0x3fff
 const TIP_OVER_TILT := 0x300
-const MAX_AIR_TILT := 0x400 * ANGLE_TO_RAD
 const DISPLAY_TILT_RATE := 0x20 * ANGLE_TO_RAD
 const DISPLAY_TILT_RATE_AIR := 0x40 * ANGLE_TO_RAD
-const STEEP_THRUST_TILT := 0x1c1
-const FLAT_GROUND_Y := 0.9999997
-const WALL_STUN_FRAMES := 8
 const CAR_STUN_FRAMES := 4
 const CONTACT_FRAMES := 8
 const SURFACE_OUT := 2
@@ -33,35 +27,10 @@ const SURFACE_MUD := 10
 const SURFACE_SPRAY := 4
 const SURFACE_WATER := 12
 const SURFACE_SPLASH := 14
-const ICE_ENGINE := 8000
-const ICE_GRIP := 0x38
 const FALL_WRECK_HEIGHT := -20.0
 const PHYSICS_TICKS_PER_GAME_FRAME := 4
-const GROUND_SNAP := 0x12 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
-const GROUND_SNAP_RISING := 4 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
-const GROUND_SNAP_LOOSE := 1 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
-const GROUND_STEP := 0x20 * UNIT_METRES
-# The original moves in steps of at most 16 units along the dominant axis and
-# snaps to the ground after each one.
-const MOTION_STEP := 16.0
-const GROUND_MAX_ANGLE := 80.0 * PI / 180.0
 const BODY_CLEARANCE := 0.25
 const GROUND_LAYER := 2
-# Both track collision bodies carry this layer, for the wall rays.
-const FACE_LAYER := 4
-const CELL_UNITS := 512.0
-# FUN_0003a000: the six points FUN_00040128 and its three siblings test, the
-# corners and side middles of a 56 by 158 unit footprint, 32 units above the
-# ground point. Listed around the body from the front left.
-const WALL_POINTS: Array[Vector3] = [
-	Vector3(-28.0, 32.0, -79.0) * UNIT_METRES,
-	Vector3(28.0, 32.0, -79.0) * UNIT_METRES,
-	Vector3(28.0, 32.0, 0.0) * UNIT_METRES,
-	Vector3(28.0, 32.0, 79.0) * UNIT_METRES,
-	Vector3(-28.0, 32.0, 79.0) * UNIT_METRES,
-	Vector3(-28.0, 32.0, 0.0) * UNIT_METRES,
-]
-const WALL_TILT := 0x200 * ANGLE_TO_RAD
 
 # Per-world handling read from offset 0xFE8C of each .TRK file:
 # [drag, grip, engine, brake, turn rate]
@@ -124,10 +93,6 @@ var turn_rate := 0
 var accel_input := 0
 var brake_input := 0
 var steer_input := 0
-# FUN_0003a330 counts how long a single-player AI car has held each steer
-# direction (car+0x1f7742 and car+0x1f7740) and eases the lock in.
-var steer_hold_left := 0
-var steer_hold_right := 0
 var controls := ""
 var net_slot := 0
 var net_driven := false
@@ -173,8 +138,19 @@ var appear_frames := 0
 var splash_wreck := false
 var splash_state := 0
 var wall_frames := 0
-var wall_hits := 0
 var tick_motion := Vector3.ZERO
+# The original's car update in its own fixed point. The fields above are what
+# the rest of the port reads and writes; they are copied in before a frame and
+# back out after it. reseat_sim makes the next frame take the attitude from
+# them too, after something other than the update has placed the car.
+var sim := CarSim.new()
+var sim_from := Vector3.ZERO
+var sim_to := Vector3.ZERO
+var sim_moved := false
+var sim_shown := Vector3.ZERO
+var sim_carried := Vector3.ZERO
+var sim_displaced := false
+var reseat_sim := true
 var contacts := {}
 var bumped := false
 var speed := 0
@@ -489,6 +465,7 @@ func _physics_process(_delta: float) -> void:
 			visual.position.y = vehicle_lift() * UNIT_METRES
 		if Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME == 0:
 			check_start_boost(start_accel())
+			sim.count_unsteered()
 			Sound.car_frame(self)
 			Fx.car_frame(self)
 		return
@@ -496,87 +473,31 @@ func _physics_process(_delta: float) -> void:
 		shown_heading_from = shown_heading
 		shown_tilt_from = shown_tilt
 		shown_lean_from = shown_lean
+		sim_displaced = global_position.distance_squared_to(sim_to) > 1e-8
+		sim_from = global_position
+		sim_to = global_position
+		sim_shown = global_position
+		sim_carried = Vector3.ZERO
 		game_frame()
 		update_shape()
 
-	var was_grounded := grounded
+	# The game frame moved the car as the original does, in one go. The ticks
+	# in between draw it on its way there. Whatever else moved it meanwhile,
+	# the track script's carpet for one, carries over.
 	var from := global_position
-	step_motion(_delta)
+	var tick := Engine.get_physics_frames() % PHYSICS_TICKS_PER_GAME_FRAME + 1
+	if sim_moved:
+		sim_carried += global_position - sim_shown
+		sim_shown = sim_from.lerp(sim_to, float(tick) / PHYSICS_TICKS_PER_GAME_FRAME) + sim_carried
+		global_position = sim_shown
 	tick_motion = global_position - from
-
-	if held:
-		grounded = wreck_frames == 0
-		vel.y = 0.0
-		last_ground_height = global_position.y
-		last_ground_position = global_position
-		update_orientation()
-		update_wheels()
-		return
-
-	var ground := probe_ground(was_grounded)
-	var water := track.water_height(global_position) if track else -INF
-	if global_position.y - GROUND_SNAP <= water and (ground.is_empty() or ground.position.y <= water):
-		grounded = wreck_frames == 0
-		if grounded:
-			global_position.y = water
-			surface = SURFACE_WATER
-			vel.y = 0.0
-			floor_normal = Vector3.UP
-			last_ground_position = global_position
-	else:
-		ground_contact(ground, was_grounded)
-
 	update_orientation()
 	update_wheels()
 
 
-func ground_contact(ground: Dictionary, was_grounded: bool) -> void:
-	# FUN_0003f31c writes the polygon surface before the landing is accepted, so a
-	# crash onto surface 0xe or 2 still reaches FUN_0003a330.
-	if wreck_frames == 0 and not splash_wreck and not ground.is_empty() and track and track.surface_of(ground) == SURFACE_SPLASH:
-		global_position.y = ground.position.y
-		floor_normal = ground.normal
-		last_ground_height = global_position.y
-		last_ground_position = global_position
-		surface = 0
-		begin_splash()
-		grounded = false
-		return
-	if wreck_frames == 0 and not ground.is_empty() and track and track.surface_of(ground) == SURFACE_OUT:
-		global_position.y = ground.position.y
-		floor_normal = ground.normal
-		last_ground_height = global_position.y
-		last_ground_position = global_position
-		surface = 0
-		wreck()
-		grounded = false
-		return
-	grounded = not ground.is_empty() and wreck_frames == 0
-	var bounced := false
-	if grounded:
-		var n: Vector3 = ground.normal
-		if not was_grounded or hard_surface_change(n):
-			grounded = land(n, ground.position.y)
-			bounced = not grounded
-	if grounded:
-		var n: Vector3 = ground.normal
-		global_position.y = ground.position.y
-		surface = track.surface_of(ground) if track else 0
-		if not was_grounded or not n.is_equal_approx(floor_normal):
-			redirect_along_surface(n)
-		floor_normal = n
-		last_ground_height = global_position.y
-		last_ground_position = global_position
-	elif bounced:
-		air_frames = 0
-		air_tilt = tilts_of(ground.normal)
-	elif was_grounded:
-		air_frames = 0
-		air_tilt = tilts_of(floor_normal)
-
-
 func game_frame() -> void:
-	wall_hits = 0
+	sim_moved = false
+	sim.count_unsteered()
 	hearing = listener_distance()
 	check_start_boost(start_accel())
 	Sound.spray(self)
@@ -606,7 +527,6 @@ func game_frame() -> void:
 	if step_appear():
 		Sound.car_frame(self)
 		return
-	apply_shove()
 	update_body_lean()
 
 	if splash_wreck:
@@ -616,7 +536,7 @@ func game_frame() -> void:
 
 	if wreck_frames > 0:
 		Sound.car_frame(self)
-		Fx.wreck_trail(self, 32 - wreck_frames)
+		Fx.wreck_trail(self, 30 - wreck_frames)
 		if wreck_frames > 1 or not respawn_held:
 			wreck_frames -= 1
 		if wreck_frames == 0:
@@ -628,10 +548,12 @@ func game_frame() -> void:
 		surface = 0
 		begin_splash()
 		return
-	# FUN_0003a330 wrecks a grounded car whose floor polygon is surface 2.
+	# FUN_0003a330 wrecks a grounded car whose floor polygon is surface 2, and
+	# the wreck count moves on in that same update.
 	if surface == SURFACE_OUT:
 		surface = 0
 		wreck()
+		wreck_frames = WRECK_FRAMES - 1
 		return
 
 	if grounded and tipped_over():
@@ -676,114 +598,115 @@ func game_frame() -> void:
 	if items.race.time_trial and not replay and (player_controlled or net_driven):
 		items.race.note_trial(items.race.cars.find(self), accel_input, brake_input, steer_input)
 
-	if wall_frames > 0:
-		wall_frames -= 1
-
-	var v2 := vel.length_squared()
-	var q := v2 / 131072.0
-	var spd := sqrt(v2) / 64.0
-	speed = int(spd)
-	var horizontal_speed := Vector2(vel.x, vel.z).length() / 64.0
+	if track == null or track.blocks == null:
+		return
+	var spd := vel.length() / 64.0
 	var travel := travel_direction(spd)
-
-	var thrust := 0.0
-	if grounded:
-		if accel_input > 0 and brake_input == 0:
-			thrust_ramp = mini(thrust_ramp + 1, 16)
-			if wall_frames == 0:
-				var power := ICE_ENGINE if surface == SURFACE_ICE else engine
-				if spd <= 0x100:
-					thrust = power
-				else:
-					thrust = maxf((0x400 - heading_travel_difference(travel)) * 2.0, 0x400) * power / 2048.0
-			if spd < 0x500:
-				thrust = minf(thrust * 2.0, 0x7fff)
-			if spd < 0x800 and ground_tilt() >= STEEP_THRUST_TILT:
-				thrust = minf(thrust * 2.0, 0x7fff)
-			if boost_frames > 0:
-				start_boost()
-				thrust = thrust * thrust_ramp / 16.0 * 1.5
-			else:
-				thrust = thrust * thrust_ramp / 16.0 * accel_input / 7.0
-		else:
-			thrust_ramp = maxi(thrust_ramp - 1, 0)
-			boost_frames = 0
-		if brake_input > 0 and (accel_input == 0 or absi(steer_input) != 7):
-			thrust -= brake * brake_input / 7.0
-	elif horizontal_speed < 0x400:
-		thrust = 0x1000
-
-	if spin_frames > 0:
-		spin_out()
-	elif steer_input != 0:
-		if steer_input > 0:
-			steer_hold_left += 1
-			steer_hold_right = 0
-		else:
-			steer_hold_right += 1
-			steer_hold_left = 0
-		var turn := turn_rate
-		if absi(steer_input) != 7:
-			turn = turn_rate * absi(steer_input) / 6
-		elif ai_steer_ramp():
-			var hold := steer_hold_left if steer_input > 0 else steer_hold_right
-			turn = mini(hold * hold + 8, turn_rate)
-		if accel_input == 7 and brake_input == 7:
-			turn += turn / 2
-		heading = wrapi(heading - signi(steer_input) * turn, 0, 4096)
-		if spd < 500:
-			thrust += 0x600
-		heading = wrapi(heading + slope_steer_drift(), 0, 4096)
-	else:
-		steer_hold_left = 0
-		steer_hold_right = 0
-		if ai_steer_ramp():
-			heading = ai_assisted_heading(heading)
-		elif heading_assist and spd > 0x200:
-			heading = assisted_heading(heading)
-
-	var k := minf(q * drag / 32768.0, 16384.0)
-	vel -= vel * (k / 16384.0)
-	vel = Vector3(rolling(vel.x), rolling(vel.y), rolling(vel.z))
-	vel += thrust_direction(travel) * thrust
-
-	if grounded:
-		if surface == SURFACE_MUD:
-			vel *= 7.0 / 8.0
-		var fwd := ground_forward()
-		var right := fwd.cross(floor_normal).normalized()
-		var flat_forward := heading_forward()
-		var sin_slip := travel.dot(Vector3(-flat_forward.z, 0.0, flat_forward.x))
-		var cos_slip := travel.dot(flat_forward)
-		var qq := q / 4.0
-		var lateral_grip := ICE_GRIP if surface == SURFACE_ICE else grip
-		if absf(sin_slip) > 0x20 / ONE and q >= 9.0:
-			var lateral := maxf(qq * sin_slip * sin_slip * 4.0 * lateral_grip / 512.0, lateral_grip)
-			lateral = minf(lateral, spd)
-			vel -= right * signf(sin_slip) * lateral * 4.0
-		if q > 4.0:
-			var longitudinal := maxf(qq * absf(cos_slip) * mini(grip, 64) / 512.0, grip * 8.0)
-			vel -= fwd * signf(cos_slip) * longitudinal
-		if accel_input == 0 and brake_input == 0 and spd < (0x40 if floor_normal.y > FLAT_GROUND_Y else 0x10):
-			vel = Vector3.ZERO
-		apply_slope_push()
-		if floor_normal.y > 0.95 and Engine.get_physics_frames() % 120 == 0:
-			safe_history.append(Transform3D(Basis(Vector3.UP, heading * ANGLE_TO_RAD), global_position + Vector3.UP * 0.5))
-			if safe_history.size() > 3:
-				safe_history.pop_front()
-			safe_transform = safe_history[0]
-	else:
-		vel.y -= GRAVITY
-		air_frames += 1
-		var rate := mini(air_frames * air_frames >> 2, 0x40) * maxf(ONE - horizontal_speed, 0.0) / ONE * ANGLE_TO_RAD
-		air_tilt += Vector2(travel.z, travel.x) * rate
-		air_tilt = air_tilt.clampf(-MAX_AIR_TILT, MAX_AIR_TILT)
+	load_sim()
+	sim.frame()
+	store_sim()
+	sim_moved = true
+	if sim.spun:
+		var list: Array[Car] = items.race.cars
+		if humans_in(list) != 1:
+			list[1].rumble(8, 1)
+	if sim.boosting:
+		start_boost()
+	if sim.landed:
+		rumble(4, 2)
+	if sim.hit_incidence >= 0:
+		rumble(wall_rumble(sim.hit_incidence), 2)
+	if sim.splashed:
+		begin_splash()
+	elif sim.wrecked:
+		wreck()
+	if grounded and floor_normal.y > 0.95 and Engine.get_physics_frames() % 120 == 0:
+		safe_history.append(Transform3D(Basis(Vector3.UP, heading * ANGLE_TO_RAD), sim_to + Vector3.UP * 0.5))
+		if safe_history.size() > 3:
+			safe_history.pop_front()
+		safe_transform = safe_history[0]
 
 	if global_position.y < FALL_WRECK_HEIGHT:
 		wreck()
 	frame_rumble(spd, travel)
 	Sound.car_frame(self)
 	Fx.car_frame(self)
+
+
+func load_sim() -> void:
+	sim.blocks = track.blocks
+	var lift := sim.blocks.offset_z
+	if reseat_sim or sim_displaced:
+		sim.pos = Vector3i(roundi(global_position.x / UNIT_METRES * ONE), roundi(global_position.z / UNIT_METRES * ONE), roundi(global_position.y / UNIT_METRES * ONE) + lift)
+	sim.vel = Vector3i(roundi(vel.x), roundi(vel.z), roundi(vel.y))
+	if (-heading & 0xfff) != (sim.heading & 0xfff):
+		sim.heading = -heading & 0xfff
+	if reseat_sim:
+		# FUN_000388c4 places a car with the tilt of its node and no more. The
+		# normal and the fall line stay as the last floor left them until the
+		# car finds its next one.
+		sim.tilt_x = roundi(air_tilt.y / ANGLE_TO_RAD)
+		sim.tilt_y = roundi(air_tilt.x / ANGLE_TO_RAD)
+		sim.slope_turn = 0
+		sim.travel = sim.heading
+		sim.last_ground = roundi(last_ground_height / UNIT_METRES * ONE) + lift
+		sim.shove = Vector2i.ZERO
+		reseat_sim = false
+	else:
+		sim.shove = Vector2i(roundi(shove_x), roundi(shove_z))
+	sim.grounded = 1 if grounded or held else 0
+	sim.air = air_frames
+	sim.wall = wall_frames
+	sim.ramp = thrust_ramp
+	sim.boost = boost_frames
+	sim.spin = spin_frames
+	sim.surface = surface
+	sim.drag = drag
+	sim.grip = grip
+	sim.base_grip = base_grip
+	sim.engine = engine
+	sim.brake_force = brake
+	sim.turn_rate = turn_rate
+	sim.accel = accel_input
+	sim.brake = brake_input
+	sim.steer = steer_input
+	sim.opponent = ai_steer_ramp()
+	sim.walls = not walls_ignored()
+	var race := items.race
+	sim.guarded = race.time_trial or race.cars[0] == self or humans_in(race.cars) > 1
+	sim.held = held
+	if held:
+		# FUN_0002f844 lays a carried car flat.
+		sim.normal = Vector3i(0, 0, 0x1000)
+		sim.tilt_x = 0
+		sim.tilt_y = 0
+		sim.fall = 0
+	var water := track.water_height(global_position)
+	sim.water = -1 if water == -INF else roundi(water / UNIT_METRES) + (lift >> 12)
+
+
+func store_sim() -> void:
+	var lift := sim.blocks.offset_z
+	vel = Vector3(sim.vel.x, sim.vel.z, sim.vel.y)
+	heading = -sim.heading & 0xfff
+	grounded = sim.grounded != 0
+	air_tilt = Vector2(Fixed.short(sim.tilt_y), Fixed.short(sim.tilt_x)) * ANGLE_TO_RAD
+	if grounded:
+		floor_normal = Vector3(sim.normal.x, sim.normal.z, sim.normal.y).normalized()
+	air_frames = sim.air
+	wall_frames = sim.wall
+	thrust_ramp = sim.ramp
+	boost_frames = sim.boost
+	spin_frames = sim.spin
+	surface = sim.surface
+	speed = sim.speed
+	grip = sim.grip
+	shove_x = sim.shove.x
+	shove_z = sim.shove.y
+	sim_to = Vector3(sim.pos.x, sim.pos.z - lift, sim.pos.y) / ONE * UNIT_METRES
+	last_ground_height = (sim.last_ground - lift) / ONE * UNIT_METRES
+	if grounded:
+		last_ground_position = sim_to
 
 
 # A car that has crossed the line on its last lap. Its pad no longer drives it,
@@ -826,7 +749,6 @@ func check_start_boost(accel: int) -> void:
 # A boosting frame on the throttle: pattern 6 and a flame behind the car on
 # even counts. With four humans the pads take turns every two frames.
 func start_boost() -> void:
-	boost_frames -= 1
 	var list: Array[Car] = items.race.cars
 	var humans := humans_in(list)
 	if humans > 3 and (list.find(self) & 3) == ((items.race.frame >> 1) & 3):
@@ -836,23 +758,6 @@ func start_boost() -> void:
 	if humans < 4:
 		rumble(6, 2)
 	Fx.start_fire(self)
-
-
-# Oil and shots spin the car in place of steering, fastest halfway through,
-# with no grip; leaving the ground ends the spin. Every spinning car queues
-# its vibration on car 1's pad (DAT_000a7098), whichever car it is.
-func spin_out() -> void:
-	if grounded:
-		heading = wrapi(heading - mini(spin_frames, 0x40 - spin_frames) * 0x20, 0, 4096)
-		spin_frames -= 1
-		var list: Array[Car] = items.race.cars
-		if humans_in(list) != 1:
-			list[1].rumble(8, 1)
-	else:
-		spin_frames = 0
-	grip = 0
-	if spin_frames == 0:
-		grip = base_grip
 
 
 func make_translucent() -> void:
@@ -917,23 +822,6 @@ func travel_direction(spd: float) -> Vector3:
 	return horizontal.normalized()
 
 
-func thrust_direction(travel: Vector3) -> Vector3:
-	if grounded:
-		return ground_forward()
-	return tilt_basis(air_tilt) * travel
-
-
-func fall_line() -> int:
-	return roundi(atan2(-floor_normal.x, -floor_normal.z) / ANGLE_TO_RAD)
-
-
-# Steering on a slope also turns the car towards the fall line.
-func slope_steer_drift() -> int:
-	var drift := (0x1000 - roundi(floor_normal.y * ONE)) >> 7
-	var to_fall := (fall_line() - heading) & 0xfff
-	return drift if to_fall >= 1 and to_fall <= 0x800 else -drift
-
-
 func heading_forward() -> Vector3:
 	var yaw := heading * ANGLE_TO_RAD
 	return Vector3(-sin(yaw), 0.0, -cos(yaw))
@@ -956,154 +844,9 @@ func tilt_basis(tilt: Vector2) -> Basis:
 	return Basis(Vector3.RIGHT, tilt.x) * Basis(Vector3.BACK, -tilt.y)
 
 
-func hard_surface_change(n: Vector3) -> bool:
-	var change := tilts_of(n) - tilts_of(floor_normal)
-	return absf(change.x) >= HARD_SURFACE_CHANGE or absf(change.y) >= HARD_SURFACE_CHANGE
-
-
-func heading_travel_difference(travel_dir: Vector3) -> int:
-	var travel := roundi(atan2(-travel_dir.x, -travel_dir.z) / ANGLE_TO_RAD)
-	var diff := (heading - travel) & 0x7ff
-	if diff > 0x400:
-		diff = 0x800 - diff
-	return diff
-
-
-func rolling(component: float) -> float:
-	if absf(component) < ROLLING_STOP:
-		return 0.0
-	return component - signf(component) * ROLLING_FRICTION
-
-
 # Single-player opponents (a71c4 < 2, a6780 == 0, not the player car).
 func ai_steer_ramp() -> bool:
 	return autopilot_enabled and not player_controlled and not battle
-
-
-func assisted_heading(h: int) -> int:
-	var quadrant := h & 0xc00
-	var a := h & 0x3fc
-	if a < 0xc0:
-		a = 0 if a < 0xd else a - 0xc
-	elif a < 0xf4:
-		a += 0xc
-	elif a < 0x140:
-		a = 0x100 if a < 0x10d else a - 0xc
-	elif a < 0x1f4:
-		a += 0xc
-	elif a < 0x2c0:
-		a = 0x200 if a < 0x20d else a - 0xc
-	elif a < 0x2f4 or a >= 0x340:
-		a += 0xc
-	else:
-		a = 0x300 if a < 0x30d else a - 0xc
-	return (quadrant + a) & 0xfff
-
-
-# The AI branch of the same heading settle, in steps of 4 and with no speed gate.
-func ai_assisted_heading(h: int) -> int:
-	var quadrant := h & 0xc00
-	var a := h & 0x3fc
-	if (a != 0 and a < 0x30) \
-			or (a >= 0x81 and a < 0xa0) \
-			or (a >= 0x101 and a < 0x130) \
-			or (a >= 0x181 and a < 0x1a0) \
-			or (a >= 0x201 and a < 0x230) \
-			or (a >= 0x281 and a < 0x2a0) \
-			or (a >= 0x301 and a < 0x330) \
-			or (a >= 0x381 and a < 0x3a0):
-		a -= 4
-	elif a > 0x3c0:
-		a += 4
-	return (quadrant + a) & 0xfff
-
-
-# The original stores the fall line a quarter turn from the heading convention,
-# so the push peaks when driving straight up or down the slope and vanishes
-# when driving across it.
-func apply_slope_push() -> void:
-	var diff := (fall_line() - heading - 0x400) & 0x7ff
-	if diff > 0x400:
-		diff = 0x800 - diff
-	if diff <= 0x100:
-		return
-	vel += Vector3(floor_normal.x, 0.0, floor_normal.z) * ONE * 3.0 * diff / 2048.0
-	vel.y -= (1.0 - floor_normal.y) * ONE * 3.0 * diff / 1024.0
-
-
-func redirect_along_surface(n: Vector3) -> void:
-	var speed := vel.length() * (1.0 + 1.0 / 512.0)
-	var travel := Vector3(vel.x, 0.0, vel.z)
-	if travel.length_squared() < 512.0 * 512.0:
-		travel = heading_forward()
-	var along := travel - n * travel.dot(n)
-	vel = along.normalized() * speed
-
-
-func land(n: Vector3, height: float) -> bool:
-	rumble(4, 2)
-	if last_ground_height - height > MAX_SAFE_DROP:
-		wreck()
-		return false
-	var speed := vel.length()
-	if speed == 0.0 or vel.dot(n) / speed >= STEEP_IMPACT:
-		return true
-	var climb_x := atan2(absf(vel.y), absf(vel.x))
-	var climb_z := atan2(absf(vel.y), absf(vel.z))
-	vel -= n * vel.dot(n) * 2.0
-	var rebound := vel.dot(n)
-	vel -= n * rebound * (climb_x + climb_z) / TAU
-	return rebound * (1.0 - (climb_x + climb_z) / TAU) <= BOUNCE_SPEED
-
-
-func probe_ground(was_grounded: bool) -> Dictionary:
-	var steps := maxf(ceilf(absf(vel[vel.abs().max_axis_index()]) / ONE / MOTION_STEP), 1.0)
-	var below := (GROUND_SNAP if was_grounded or vel.y <= 0.0 else GROUND_SNAP_RISING) * steps
-	if was_grounded and surface == SURFACE_LOOSE:
-		below = GROUND_SNAP_LOOSE * steps
-	var motion := tick_motion
-	var above := GROUND_STEP + maxf(-motion.y, 0.0) + Vector2(motion.x, motion.z).length() * tan(HARD_SURFACE_CHANGE)
-	var query := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * above, global_position - Vector3.UP * below, GROUND_LAYER)
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	if not hit.is_empty() and hit.normal.angle_to(Vector3.UP) <= GROUND_MAX_ANGLE:
-		return hit
-	return {}
-
-
-# FUN_0003a330 moves the car in steps of at most 16 units along its fastest
-# axis: x and its wall test, then z and its wall test, then the height. A wall
-# hit backs the car off, bounces it and starts the motion over with the new
-# speed. A second hit in the same game frame stops the car instead.
-func step_motion(delta: float) -> void:
-	var walls := not walls_ignored()
-	while true:
-		var motion := vel * FIXED_TO_MPS * delta
-		var longest := maxf(absf(motion.x), maxf(absf(motion.y), absf(motion.z)))
-		if longest == 0.0:
-			return
-		var steps := maxi(ceili(longest / (MOTION_STEP * UNIT_METRES)), 1)
-		var hit := false
-		for i in steps:
-			var step := motion * (MOTION_STEP * UNIT_METRES / longest)
-			if i == steps - 1:
-				step = motion - step * (steps - 1)
-			if step.x != 0.0:
-				global_position.x += step.x
-				if walls and wall_hit(Vector3.AXIS_X, step.x):
-					hit = true
-					break
-			if step.z != 0.0:
-				global_position.z += step.z
-				if walls and wall_hit(Vector3.AXIS_Z, step.z):
-					hit = true
-					break
-			global_position.y += step.y
-		if not hit:
-			return
-		wall_hits += 1
-		if wall_hits >= 2:
-			vel = Vector3.ZERO
-			return
 
 
 # FUN_00039a6c: with at most one human and outside a time trial, a grounded
@@ -1124,114 +867,9 @@ func walls_ignored() -> bool:
 	return Vector2(at.x - u[0], at.y - u[1]).length_squared() <= span / 5.0
 
 
-# FUN_00040128, FUN_00040f7c, FUN_00041db8 and FUN_00042cf0, one for each way
-# along x and z. After a step along an axis, four of the six body points are
-# tested: has the point passed through a face during the step, or up to a unit
-# before it? The original looks the faces up in the cell the point is in, so a
-# face only counts in the point's own layer; a point level with the top of a
-# layer is in the one above. A hit moves the car back by the step, less how far
-# the point went past the face, plus two units.
-func wall_hit(axis: int, moved: float) -> bool:
-	var way := signf(moved)
-	var along := Vector3.ZERO
-	along[axis] = way
-	var tilt := tilts_of(floor_normal) if grounded else air_tilt
-	var frame := tilt_basis(tilt) * Basis(Vector3.UP, heading * ANGLE_TO_RAD)
-	var lean := atan2(frame.y[axis], frame.y.y)
-	var reach := absf(moved) + UNIT_METRES
-	var space := get_world_3d().direct_space_state
-	var first := leading_point(axis, way)
-	for k in 4:
-		var offset := frame * WALL_POINTS[(first + k) % 6]
-		var at := global_position + offset
-		var layer := floori(at.y / UNIT_METRES / CELL_UNITS + 1.0 / 4096.0)
-		var from := at - along * reach
-		for _pass in 8:
-			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, at, FACE_LAYER))
-			if hit.is_empty():
-				break
-			if is_wall(hit, axis, lean, layer, offset * way):
-				var past: float = (at[axis] - hit.position[axis]) * way
-				global_position[axis] -= way * (absf(moved) - past + 2.0 * UNIT_METRES)
-				if track.face_surface(hit) == SURFACE_OUT:
-					surface = 0
-					wreck()
-				wall_frames = WALL_STUN_FRAMES
-				var n: Vector3 = hit.normal
-				bounce_off_wall(-n if vel.dot(n) > 0.0 else n)
-				return true
-			from = hit.position + along * 0.001
-			if (at[axis] - from[axis]) * way <= 0.0:
-				break
-	return false
-
-
-# FUN_0003a330 picks the first of the four points from the heading, in these
-# bands of the original's heading, which is the port's negated. The bands are
-# for a move down the axis; a move up it starts three points further round.
-func leading_point(axis: int, way: float) -> int:
-	var h := -heading & 0xfff
-	var first := 0
-	if axis == Vector3.AXIS_X:
-		if h < 0x300:
-			first = 3
-		elif h < 0x500:
-			first = 2
-		elif h < 0x800:
-			first = 1
-		elif h < 0xb00:
-			first = 0
-		elif h < 0xd00:
-			first = 5
-		else:
-			first = 4
-	elif h < 0x100 or h > 0xf00:
-		first = 5
-	elif h < 0x400:
-		first = 4
-	elif h < 0x700:
-		first = 3
-	elif h < 0x900:
-		first = 2
-	elif h < 0xc00:
-		first = 1
-	return (first + 3) % 6 if way > 0.0 else first
-
-
-# A face stops a body point when it is in the point's layer, leans more than
-# 0x200 from the car's own tilt along the axis, and the point is on the side
-# of the car that faces it. side is the point's offset, turned to the move.
-func is_wall(hit: Dictionary, axis: int, lean: float, layer: int, side: Vector3) -> bool:
-	var n: Vector3 = hit.normal
-	if n.y < 0.0:
-		n = -n
-	if is_zero_approx(n[axis]) or track.face_layer(hit) != layer:
-		return false
-	if absf(angle_difference(lean, atan2(n[axis], n.y))) <= WALL_TILT:
-		return false
-	var facing := Vector3(n.x, 0.0, n.z)
-	if facing[axis] < 0.0:
-		facing = -facing
-	return side.dot(facing) > 0.0
-
-
-func bounce_off_wall(n: Vector3) -> void:
-	var into := vel.dot(n)
-	if into >= 0.0:
-		return
-	if not grounded and last_ground_height - global_position.y > MAX_SAFE_DROP:
-		wreck()
-		return
-	var incidence := -into / vel.length()
-	var keep := minf(1.25 - incidence, 1.0)
-	vel = (vel - n * into * 2.0) * keep
-	wall_frames = WALL_STUN_FRAMES
-	rumble(wall_rumble(incidence), 2)
-
-
 # FUN_00043c1c picks a stronger pattern for a fast, head-on wall hit.
-func wall_rumble(incidence: float) -> int:
-	var glance := mini(0x1400 - mini(int(incidence * ONE), 0x1000), 0x1000) >> 1
+func wall_rumble(incidence: int) -> int:
+	var glance := mini(0x1400 - mini(incidence, 0x1000), 0x1000) >> 1
 	var pace := 4
 	if speed < 0xc00:
 		pace = 3
@@ -1342,7 +980,7 @@ static func bump_pass(cars: Array[Car]) -> void:
 # overlap replaces each horizontal speed with 15/16 of the other's, then kicks
 # them 4 units/frame apart along BUMP_PUSH, 8 with bumper cars. The speed that was cancelled and,
 # while the pair stays overlapped, each car's own speed, collect in a shove that
-# apply_shove drips onto the position. A miss inside the box clears the contact
+# the car update drips onto the position. A miss inside the box clears the contact
 # count, even for grown, stilted, or bouncing cars; leaving the box keeps it.
 # The original wrecks the bombed car first, but its wreck leaves the speed
 # alone, so the exchange sees the victim's speed either way.
@@ -1606,7 +1244,7 @@ func wreck_count() -> int:
 	if splash_wreck:
 		return splash_state
 	if wreck_frames > 0:
-		return 32 - wreck_frames
+		return 30 - wreck_frames
 	return 0
 
 
@@ -1630,30 +1268,6 @@ func share_speed(v: float) -> float:
 	if n < 0:
 		n += 15
 	return n >> 4
-
-
-# FUN_0003a330 at 0x3d14c. Up to 4 units of shove move the car each game frame.
-# A remainder inside that range is applied whole, but a small negative remainder
-# is subtracted, so it moves the other way (subu at 0x3d188).
-func apply_shove() -> void:
-	var step := take_shove(shove_x)
-	shove_x = step.y
-	global_position.x += step.x / ONE * UNIT_METRES
-	step = take_shove(shove_z)
-	shove_z = step.y
-	global_position.z += step.x / ONE * UNIT_METRES
-
-
-func take_shove(amount: float) -> Vector2:
-	if amount > 0.0:
-		if amount < 0x4001:
-			return Vector2(amount, 0.0)
-		return Vector2(0x4000, amount - 0x4000)
-	if amount < 0.0:
-		if amount < -0x4000:
-			return Vector2(-0x4000, amount + 0x4000)
-		return Vector2(-amount, 0.0)
-	return Vector2.ZERO
 
 
 # FUN_0002a824 vibrates the pad outside the front end. The wreck state reaches 2
@@ -1740,9 +1354,13 @@ func respawn() -> void:
 
 
 func teleport(xform: Transform3D, node := -1) -> void:
+	reseat_sim = true
+	sim.steer_left = 0
+	sim.steer_right = 0
 	global_transform = xform
 	heading = wrapi(roundi(xform.basis.get_euler().y / ANGLE_TO_RAD), 0, 4096)
 	vel = Vector3.ZERO
+	speed = 0
 	thrust_ramp = 0
 	boost_frames = 0
 	wreck_frames = 0
@@ -1773,6 +1391,7 @@ func teleport(xform: Transform3D, node := -1) -> void:
 # FUN_000388c4 copies the node slope into the drawn tilt and leaves the car
 # there until physics is allowed to run.
 func plant(node: int) -> void:
+	reseat_sim = true
 	grounded = true
 	shown_heading = heading
 	shown_heading_from = heading

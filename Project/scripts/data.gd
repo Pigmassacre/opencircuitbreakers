@@ -4,6 +4,7 @@ const REQUIRED := [
 	"tracks/races.json",
 	"tracks/names.json",
 	"tracks/previews.json",
+	"tracks/wwest1/blocks.bin",
 	"cars/car0/car.json",
 	"cars/car0/mesh.bin",
 	"cars/car0/atlas.png",
