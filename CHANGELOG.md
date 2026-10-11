@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.0 - 2026-10-11
+
+### Added
+- Restart in the pause menu during a singleplayer race. It asks before the race starts over.
+
+### Changed
+- Cars drive with the original game's physics. Steering will not swing the car into a wall beside it, acceleration and grip follow the slope, and wall bounces, landings, respawns and wrecks match the original.
+- This version needs the game data to be exported again. The setup page explains this and asks for your copy of the game.
+- Opening the game shows a loading percentage while the menu is prepared, so the first time you open a page it is already ready.
+
+### Fixed
+- After crossing the line, your car coasts to a stop. The controls and items no longer respond.
+- The finish screen no longer draws a line beside a new best time.
+
 ## 1.0.4 - 2026-10-07
 
 ### Added
