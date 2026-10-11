@@ -241,7 +241,7 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not armed:
 		return
-	if rematch.visible or not event.is_action_pressed("ui_cancel"):
+	if rematch.visible or not event.is_action_pressed("ui_cancel") or event.is_action("pause"):
 		return
 	if not get_tree().paused:
 		return
