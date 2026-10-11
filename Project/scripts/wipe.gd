@@ -87,6 +87,7 @@ func to(path: String, during: Callable = Callable()) -> void:
 	lo = 0.0
 	hi = 1.0
 	get_tree().change_scene_to_packed(packed)
+	await get_tree().scene_changed
 	if boot.is_valid():
 		var job := boot
 		boot = Callable()
