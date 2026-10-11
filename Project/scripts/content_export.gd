@@ -582,6 +582,7 @@ func export_level(dat_path: String, trk_path: String, tex_path: String, out_dir:
 	write_bytes(out_dir.path_join("surfaces.bin"), surface_bytes)
 	track.cells = cells
 	write_collision(track, out_dir.path_join("collision.bin"))
+	write_blocks(track, out_dir.path_join("blocks.bin"))
 	WorkerThreadPool.wait_for_task_completion(png_task)
 	if png_errors.size() > 0:
 		fail("Could not write " + png_path)
@@ -724,6 +725,91 @@ func write_collision(track: Dictionary, path: String) -> void:
 		bin.f32(component)
 	for kind in kinds:
 		bin.u8(kind)
+	write_bytes(path, bin.bytes())
+
+
+# blocks.bin is the collision data as the original keeps it, for the car update:
+# the grid of cells, each a piece and two mirror bits, and for every piece its
+# vertices, its faces with the eight numbers stored beside them, and the face
+# lists of its sixteen buckets, triangles then quads.
+func write_blocks(track: Dictionary, path: String) -> void:
+	var data: PackedByteArray = track.data
+	var grid_w: int = track.dims[0]
+	var grid_d: int = track.dims[1]
+	var bin := BinWriter.new()
+	bin.i32(grid_w)
+	bin.i32(grid_d)
+	bin.i32(divi(track.cells.size(), grid_w * grid_d))
+	var pointers: Array = []
+	var lowest := 0
+	var have := false
+	for i in COLLISION_POINTERS:
+		var ptr := data.decode_u32(DAT_COLLISION + i * 4)
+		pointers.append(ptr)
+		if ptr != 0 and (not have or ptr < lowest):
+			lowest = ptr
+			have = true
+	var base := lowest - (DAT_COLLISION + COLLISION_POINTERS * 4)
+	var used := {}
+	for cell: Array in track.cells:
+		var piece: int = cell[0]
+		if piece != 0xff and piece < COLLISION_POINTERS and int(pointers[piece]) != 0:
+			used[piece] = true
+			bin.u8(piece)
+			bin.u8(int(cell[1]) & 3)
+		else:
+			bin.u8(0xff)
+			bin.u8(0)
+	bin.i32(used.size())
+	for piece: int in used:
+		var o := int(pointers[piece]) - base
+		var verts_at := int(data.decode_u32(o)) - base
+		var lists: Array = []
+		var order: Array = []
+		var seen := {}
+		var quads := {}
+		for i in 16:
+			var p := int(data.decode_u32(o + 4 + i * 4)) - base
+			var pair: Array = [[], []]
+			for quad_pass in 2:
+				while data[p] != 0xff:
+					var index := data[p]
+					pair[quad_pass].append(index)
+					if not seen.has(index):
+						seen[index] = true
+						order.append(index)
+					if quad_pass == 1:
+						quads[index] = true
+					p += 1
+				p += 1
+			lists.append(pair)
+		order.sort()
+		var slot := {}
+		var vert_count := 0
+		for index: int in order:
+			slot[index] = slot.size()
+			var f := int(data.decode_u32(o + (index + 0x11) * 4)) - base
+			for k in (4 if quads.has(index) else 3):
+				vert_count = maxi(vert_count, data[f + k] + 1)
+		bin.u8(piece)
+		bin.i32(vert_count)
+		for i in vert_count:
+			bin.i16(data.decode_s16(verts_at + i * 20))
+			bin.i16(data.decode_s16(verts_at + i * 20 + 2))
+			bin.i16(data.decode_s16(verts_at + i * 20 + 4))
+		bin.i32(order.size())
+		for index: int in order:
+			var f := int(data.decode_u32(o + (index + 0x11) * 4)) - base
+			for k in 4:
+				bin.u8(data[f + k] if k < 3 or quads.has(index) else 0)
+			for k in 8:
+				bin.i16(data.decode_s16(f + 4 + k * 2))
+			bin.u8((data.decode_u16(f - 2) >> 8) & 0xfe)
+		for pair: Array in lists:
+			for list: Array in pair:
+				bin.i32(list.size())
+				for index: int in list:
+					bin.u8(slot[index])
 	write_bytes(path, bin.bytes())
 
 
@@ -3001,6 +3087,9 @@ class BinWriter:
 
 	func u8(v: int) -> void:
 		peer.put_u8(v)
+
+	func i16(v: int) -> void:
+		peer.put_16(v)
 
 	func raw(data: PackedByteArray) -> void:
 		peer.put_data(data)

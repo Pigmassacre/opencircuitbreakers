@@ -20,10 +20,7 @@ var water_level := -INF
 var water_regions: Array = []
 var surfaces := PackedByteArray()
 var wall_body: StaticBody3D
-var wall_surfaces := PackedByteArray()
-# The cell layer each collision face sits in, for the floor body and the wall body.
-var floor_layers := PackedByteArray()
-var wall_layers := PackedByteArray()
+var blocks: CollisionBlocks
 var script_tokens := PackedInt32Array()
 var objects := PackedInt32Array()
 var object_meshes: Dictionary[int, ArrayMesh] = {}
@@ -89,6 +86,7 @@ func load_from(dir: String, collide := true) -> void:
 	instance.mesh = mesh
 	add_child(instance)
 	if collide:
+		read_blocks(dir)
 		build_collision(read_bytes(dir + "/collision.bin"))
 
 
@@ -109,6 +107,7 @@ func load_async(dir: String) -> void:
 	instance.name = "Mesh"
 	instance.mesh = mesh
 	add_child(instance)
+	read_blocks(dir)
 	await build_collision_async(await Wipe.read_file(disk_path(dir + "/collision.bin"), 0.8, 0.86), 0.86, 1.0)
 
 
@@ -223,19 +222,36 @@ func build_objects_async(bytes: PackedByteArray, info: Dictionary, materials: Ar
 
 
 func build_collision(collision_bytes: PackedByteArray) -> void:
+	build_blocks(collision_bytes)
 	place_collision(classify_collision(collision_bytes))
 
 
+# An original track comes with the original's own collision blocks. A level
+# from the editor has only its triangles, and build_blocks makes blocks of those.
+func read_blocks(dir: String) -> void:
+	blocks = null
+	if FileAccess.file_exists(disk_path(dir + "/blocks.bin")):
+		blocks = CollisionBlocks.read(read_bytes(dir + "/blocks.bin"))
+
+
+# The cells and buckets the car update looks its floors and walls up in.
+func build_blocks(collision_bytes: PackedByteArray) -> void:
+	if blocks != null:
+		return
+	var tri_count := collision_bytes.decode_s32(0)
+	var surface_at := 4 + tri_count * 9 * 4
+	blocks = CollisionBlocks.build(collision_bytes.slice(4, surface_at).to_float32_array(), collision_bytes.slice(surface_at, surface_at + tri_count))
+
+
 func build_collision_async(collision_bytes: PackedByteArray, a: float, b: float) -> void:
+	build_blocks(collision_bytes)
+	await Wipe.breathe(a)
 	var tri_count := collision_bytes.decode_s32(0)
 	var floats := collision_bytes.slice(4, 4 + tri_count * 9 * 4).to_float32_array()
 	var surface_at := 4 + tri_count * 9 * 4
 	var floor_faces := PackedVector3Array()
 	var wall_faces := PackedVector3Array()
 	var kinds := PackedByteArray()
-	wall_surfaces = PackedByteArray()
-	floor_layers = PackedByteArray()
-	wall_layers = PackedByteArray()
 	var floor_cos := cos(Car.HARD_SURFACE_CHANGE)
 	var denom := maxi(tri_count, 1)
 	for i in tri_count:
@@ -245,19 +261,15 @@ func build_collision_async(collision_bytes: PackedByteArray, a: float, b: float)
 		var tri_c := Vector3(floats[f + 6], floats[f + 7], floats[f + 8])
 		var n := (tri_b - tri_a).cross(tri_c - tri_a)
 		if n.length_squared() >= 1e-12:
-			var layer := cell_layer(tri_a, tri_b, tri_c)
 			if absf(n.normalized().y) >= floor_cos:
 				floor_faces.append(tri_a)
 				floor_faces.append(tri_b)
 				floor_faces.append(tri_c)
 				kinds.append(collision_bytes[surface_at + i])
-				floor_layers.append(layer)
 			else:
 				wall_faces.append(tri_a)
 				wall_faces.append(tri_b)
 				wall_faces.append(tri_c)
-				wall_surfaces.append(collision_bytes[surface_at + i])
-				wall_layers.append(layer)
 		if (i & 2047) == 2047:
 			await Wipe.breathe(lerpf(a, b, float(i + 1) / float(denom)))
 	surfaces = kinds
@@ -274,9 +286,6 @@ func classify_collision(collision_bytes: PackedByteArray) -> Dictionary:
 	var floor_faces := PackedVector3Array()
 	var wall_faces := PackedVector3Array()
 	var kinds := PackedByteArray()
-	wall_surfaces = PackedByteArray()
-	floor_layers = PackedByteArray()
-	wall_layers = PackedByteArray()
 	var floor_cos := cos(Car.HARD_SURFACE_CHANGE)
 	for i in tri_count:
 		var f := i * 9
@@ -286,19 +295,15 @@ func classify_collision(collision_bytes: PackedByteArray) -> Dictionary:
 		var n := (tri_b - tri_a).cross(tri_c - tri_a)
 		if n.length_squared() < 1e-12:
 			continue
-		var layer := cell_layer(tri_a, tri_b, tri_c)
 		if absf(n.normalized().y) >= floor_cos:
 			floor_faces.append(tri_a)
 			floor_faces.append(tri_b)
 			floor_faces.append(tri_c)
 			kinds.append(collision_bytes[surface_at + i])
-			floor_layers.append(layer)
 		else:
 			wall_faces.append(tri_a)
 			wall_faces.append(tri_b)
 			wall_faces.append(tri_c)
-			wall_surfaces.append(collision_bytes[surface_at + i])
-			wall_layers.append(layer)
 	surfaces = kinds
 	return {"floor": floor_faces, "wall": wall_faces}
 
@@ -306,32 +311,8 @@ func classify_collision(collision_bytes: PackedByteArray) -> Dictionary:
 func place_collision(split: Dictionary) -> void:
 	var floor_faces: PackedVector3Array = split.floor
 	var wall_faces: PackedVector3Array = split.wall
-	body = add_collision(floor_faces, Car.GROUND_LAYER | Car.FACE_LAYER)
-	wall_body = add_collision(wall_faces, 1 | Car.FACE_LAYER)
-
-
-# The track is a grid of 512-unit cells stacked in layers, and a collision
-# face belongs to the layer its cell is in. A face never crosses a layer, so
-# the middle of the face tells which one.
-func cell_layer(a: Vector3, b: Vector3, c: Vector3) -> int:
-	return clampi(floori((a.y + b.y + c.y) / 3.0 / Car.UNIT_METRES / Car.CELL_UNITS), 0, 255)
-
-
-# The layer and surface of the face a ray hit on either collision body.
-func face_layer(hit: Dictionary) -> int:
-	if hit.collider == body:
-		return floor_layers[hit.face_index]
-	if hit.collider == wall_body:
-		return wall_layers[hit.face_index]
-	return -1
-
-
-func face_surface(hit: Dictionary) -> int:
-	if hit.collider == body:
-		return surfaces[hit.face_index]
-	if hit.collider == wall_body:
-		return wall_surfaces[hit.face_index]
-	return 0
+	body = add_collision(floor_faces, Car.GROUND_LAYER)
+	wall_body = add_collision(wall_faces, 1)
 
 
 func read_surface(mesh: ArrayMesh, bytes: PackedByteArray, offset: int, material: Material) -> PackedVector3Array:
@@ -398,8 +379,8 @@ func read_surface_async(mesh: ArrayMesh, bytes: PackedByteArray, offset: int, ma
 	return positions
 
 
-# Cars follow the floor with a ray and test walls with rays from six points
-# of the body, like the original's point sampling. See Car.wall_hit.
+# The bodies are what item shots and other rays meet. Cars do not use them:
+# their floors and walls come from the collision blocks.
 func add_collision(triangles: PackedVector3Array, layer: int) -> StaticBody3D:
 	var shape := ConcavePolygonShape3D.new()
 	shape.backface_collision = true
@@ -746,7 +727,7 @@ func lane_height(node: Dictionary, lane: float) -> float:
 	]
 	var t := clampf(lane, 0.0, 1.0) * 4.0
 	var i := mini(int(t), 3)
-	return lerpf(heights[i], heights[i + 1], t - float(i)) + 0.01
+	return lerpf(heights[i], heights[i + 1], t - float(i))
 
 
 # Byte 3 is the tilt about X and byte 2 the tilt about Z, both shifted up by 4.
