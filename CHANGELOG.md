@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 - 2026-10-11
+
+### Fixed
+- Pressing Escape opens the pause menu and leaves it open.
+- The loading cover stays closed until the next screen has finished loading.
+
 ## 1.1.0 - 2026-10-11
 
 ### Added
