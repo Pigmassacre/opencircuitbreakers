@@ -41,14 +41,27 @@ const GROUND_SNAP := 0x12 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
 const GROUND_SNAP_RISING := 4 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
 const GROUND_SNAP_LOOSE := 1 * UNIT_METRES / PHYSICS_TICKS_PER_GAME_FRAME
 const GROUND_STEP := 0x20 * UNIT_METRES
-const STEP_EDGE_REACH := 0.05
-const STEP_EDGE_FACING := 0.5
 # The original moves in steps of at most 16 units along the dominant axis and
 # snaps to the ground after each one.
 const MOTION_STEP := 16.0
 const GROUND_MAX_ANGLE := 80.0 * PI / 180.0
 const BODY_CLEARANCE := 0.25
 const GROUND_LAYER := 2
+# Both track collision bodies carry this layer, for the wall rays.
+const FACE_LAYER := 4
+const CELL_UNITS := 512.0
+# FUN_0003a000: the six points FUN_00040128 and its three siblings test, the
+# corners and side middles of a 56 by 158 unit footprint, 32 units above the
+# ground point. Listed around the body from the front left.
+const WALL_POINTS: Array[Vector3] = [
+	Vector3(-28.0, 32.0, -79.0) * UNIT_METRES,
+	Vector3(28.0, 32.0, -79.0) * UNIT_METRES,
+	Vector3(28.0, 32.0, 0.0) * UNIT_METRES,
+	Vector3(28.0, 32.0, 79.0) * UNIT_METRES,
+	Vector3(-28.0, 32.0, 79.0) * UNIT_METRES,
+	Vector3(-28.0, 32.0, 0.0) * UNIT_METRES,
+]
+const WALL_TILT := 0x200 * ANGLE_TO_RAD
 
 # Per-world handling read from offset 0xFE8C of each .TRK file:
 # [drag, grip, engine, brake, turn rate]
@@ -160,6 +173,8 @@ var appear_frames := 0
 var splash_wreck := false
 var splash_state := 0
 var wall_frames := 0
+var wall_hits := 0
+var tick_motion := Vector3.ZERO
 var contacts := {}
 var bumped := false
 var speed := 0
@@ -486,9 +501,8 @@ func _physics_process(_delta: float) -> void:
 
 	var was_grounded := grounded
 	var from := global_position
-	velocity = vel * FIXED_TO_MPS
-	move_and_slide()
-	resolve_collisions(from)
+	step_motion(_delta)
+	tick_motion = global_position - from
 
 	if held:
 		grounded = wreck_frames == 0
@@ -562,6 +576,7 @@ func ground_contact(ground: Dictionary, was_grounded: bool) -> void:
 
 
 func game_frame() -> void:
+	wall_hits = 0
 	hearing = listener_distance()
 	check_start_boost(start_accel())
 	Sound.spray(self)
@@ -1046,62 +1061,158 @@ func probe_ground(was_grounded: bool) -> Dictionary:
 	var below := (GROUND_SNAP if was_grounded or vel.y <= 0.0 else GROUND_SNAP_RISING) * steps
 	if was_grounded and surface == SURFACE_LOOSE:
 		below = GROUND_SNAP_LOOSE * steps
-	var motion := get_position_delta()
+	var motion := tick_motion
 	var above := GROUND_STEP + maxf(-motion.y, 0.0) + Vector2(motion.x, motion.z).length() * tan(HARD_SURFACE_CHANGE)
-	var query := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * above, global_position - Vector3.UP * below)
-	var exclude: Array[RID] = [get_rid()]
-	query.exclude = exclude
-	var space := get_world_3d().direct_space_state
-	var hit := space.intersect_ray(query)
-	while not hit.is_empty() and hit.collider is Car:
-		exclude.append(hit.rid)
-		query.exclude = exclude
-		hit = space.intersect_ray(query)
+	var query := PhysicsRayQueryParameters3D.create(global_position + Vector3.UP * above, global_position - Vector3.UP * below, GROUND_LAYER)
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if not hit.is_empty() and hit.normal.angle_to(Vector3.UP) <= GROUND_MAX_ANGLE:
 		return hit
-	if was_grounded:
-		return {}
-	for i in get_slide_collision_count():
-		var collision := get_slide_collision(i)
-		if collision.get_collider() is not Car and collision.get_normal().angle_to(Vector3.UP) <= HARD_SURFACE_CHANGE:
-			return {"normal": collision.get_normal(), "position": global_position, "collider": null}
 	return {}
 
 
-func resolve_collisions(from: Vector3) -> void:
-	var bounced := false
-	var stepped := false
-	var ground_up := floor_normal if grounded else Vector3.UP
-	for i in get_slide_collision_count():
-		var collision := get_slide_collision(i)
-		var n := collision.get_normal()
-		var other := collision.get_collider()
-		if other is RigidBody3D:
-			push_prop(other, n)
-		elif step_edge(collision.get_position(), n):
-			stepped = true
-		elif not bounced and n.angle_to(ground_up) > HARD_SURFACE_CHANGE:
-			bounce_off_wall(n)
-			bounced = true
-	if stepped and not bounced:
-		global_position = from + vel * FIXED_TO_MPS * get_physics_process_delta_time()
+# FUN_0003a330 moves the car in steps of at most 16 units along its fastest
+# axis: x and its wall test, then z and its wall test, then the height. A wall
+# hit backs the car off, bounces it and starts the motion over with the new
+# speed. A second hit in the same game frame stops the car instead.
+func step_motion(delta: float) -> void:
+	var walls := not walls_ignored()
+	while true:
+		var motion := vel * FIXED_TO_MPS * delta
+		var longest := maxf(absf(motion.x), maxf(absf(motion.y), absf(motion.z)))
+		if longest == 0.0:
+			return
+		var steps := maxi(ceili(longest / (MOTION_STEP * UNIT_METRES)), 1)
+		var hit := false
+		for i in steps:
+			var step := motion * (MOTION_STEP * UNIT_METRES / longest)
+			if i == steps - 1:
+				step = motion - step * (steps - 1)
+			if step.x != 0.0:
+				global_position.x += step.x
+				if walls and wall_hit(Vector3.AXIS_X, step.x):
+					hit = true
+					break
+			if step.z != 0.0:
+				global_position.z += step.z
+				if walls and wall_hit(Vector3.AXIS_Z, step.z):
+					hit = true
+					break
+			global_position.y += step.y
+		if not hit:
+			return
+		wall_hits += 1
+		if wall_hits >= 2:
+			vel = Vector3.ZERO
+			return
 
 
-# The body running into the rim of a floor that reaches it from the car's side,
-# as the lip of a jump ramp does. The original samples the car at a point, which
-# is level with that rim when it gets there, so the wall face under the rim must
-# not stop the body. A kerb met from below has no floor on this side and stays a
-# wall, and a rim the body only rests on does not face the travel.
-func step_edge(at: Vector3, n: Vector3) -> bool:
-	if at.y - global_position.y > GROUND_STEP + STEP_EDGE_REACH:
+# FUN_00039a6c: with at most one human and outside a time trial, a grounded
+# car other than car 0 skips the wall tests while it is near the middle of a
+# gate wider than 176 units.
+func walls_ignored() -> bool:
+	if not grounded or items == null or battle:
+		return false
+	var race := items.race
+	var me := race.cars.find(self)
+	if me <= 0 or race.time_trial or humans_in(race.cars) > 1:
+		return false
+	var u: Array = track.nodes[race.nodes[me]].units
+	var span := Vector2(u[3] - u[5], u[4] - u[6]).length_squared()
+	if span <= 0x7900:
+		return false
+	var at := track.to_units(global_position)
+	return Vector2(at.x - u[0], at.y - u[1]).length_squared() <= span / 5.0
+
+
+# FUN_00040128, FUN_00040f7c, FUN_00041db8 and FUN_00042cf0, one for each way
+# along x and z. After a step along an axis, four of the six body points are
+# tested: has the point passed through a face during the step, or up to a unit
+# before it? The original looks the faces up in the cell the point is in, so a
+# face only counts in the point's own layer; a point level with the top of a
+# layer is in the one above. A hit moves the car back by the step, less how far
+# the point went past the face, plus two units.
+func wall_hit(axis: int, moved: float) -> bool:
+	var way := signf(moved)
+	var along := Vector3.ZERO
+	along[axis] = way
+	var tilt := tilts_of(floor_normal) if grounded else air_tilt
+	var frame := tilt_basis(tilt) * Basis(Vector3.UP, heading * ANGLE_TO_RAD)
+	var lean := atan2(frame.y[axis], frame.y.y)
+	var reach := absf(moved) + UNIT_METRES
+	var space := get_world_3d().direct_space_state
+	var first := leading_point(axis, way)
+	for k in 4:
+		var offset := frame * WALL_POINTS[(first + k) % 6]
+		var at := global_position + offset
+		var layer := floori(at.y / UNIT_METRES / CELL_UNITS + 1.0 / 4096.0)
+		var from := at - along * reach
+		for _pass in 8:
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, at, FACE_LAYER))
+			if hit.is_empty():
+				break
+			if is_wall(hit, axis, lean, layer, offset * way):
+				var past: float = (at[axis] - hit.position[axis]) * way
+				global_position[axis] -= way * (absf(moved) - past + 2.0 * UNIT_METRES)
+				if track.face_surface(hit) == SURFACE_OUT:
+					surface = 0
+					wreck()
+				wall_frames = WALL_STUN_FRAMES
+				var n: Vector3 = hit.normal
+				bounce_off_wall(-n if vel.dot(n) > 0.0 else n)
+				return true
+			from = hit.position + along * 0.001
+			if (at[axis] - from[axis]) * way <= 0.0:
+				break
+	return false
+
+
+# FUN_0003a330 picks the first of the four points from the heading, in these
+# bands of the original's heading, which is the port's negated. The bands are
+# for a move down the axis; a move up it starts three points further round.
+func leading_point(axis: int, way: float) -> int:
+	var h := -heading & 0xfff
+	var first := 0
+	if axis == Vector3.AXIS_X:
+		if h < 0x300:
+			first = 3
+		elif h < 0x500:
+			first = 2
+		elif h < 0x800:
+			first = 1
+		elif h < 0xb00:
+			first = 0
+		elif h < 0xd00:
+			first = 5
+		else:
+			first = 4
+	elif h < 0x100 or h > 0xf00:
+		first = 5
+	elif h < 0x400:
+		first = 4
+	elif h < 0x700:
+		first = 3
+	elif h < 0x900:
+		first = 2
+	elif h < 0xc00:
+		first = 1
+	return (first + 3) % 6 if way > 0.0 else first
+
+
+# A face stops a body point when it is in the point's layer, leans more than
+# 0x200 from the car's own tilt along the axis, and the point is on the side
+# of the car that faces it. side is the point's offset, turned to the move.
+func is_wall(hit: Dictionary, axis: int, lean: float, layer: int, side: Vector3) -> bool:
+	var n: Vector3 = hit.normal
+	if n.y < 0.0:
+		n = -n
+	if is_zero_approx(n[axis]) or track.face_layer(hit) != layer:
+		return false
+	if absf(angle_difference(lean, atan2(n[axis], n.y))) <= WALL_TILT:
 		return false
 	var facing := Vector3(n.x, 0.0, n.z)
-	if facing.dot(Vector3(vel.x, 0.0, vel.z).normalized()) > -STEP_EDGE_FACING:
-		return false
-	var near := at + facing.normalized() * STEP_EDGE_REACH
-	var reach := Vector3.UP * STEP_EDGE_REACH * 2.0
-	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(near + reach, near - reach, GROUND_LAYER))
-	return not hit.is_empty() and hit.normal.angle_to(Vector3.UP) <= HARD_SURFACE_CHANGE
+	if facing[axis] < 0.0:
+		facing = -facing
+	return side.dot(facing) > 0.0
 
 
 func bounce_off_wall(n: Vector3) -> void:
@@ -1543,14 +1654,6 @@ func take_shove(amount: float) -> Vector2:
 			return Vector2(-0x4000, amount + 0x4000)
 		return Vector2(-amount, 0.0)
 	return Vector2.ZERO
-
-
-func push_prop(prop: RigidBody3D, n: Vector3) -> void:
-	var closing := -vel.dot(n)
-	if closing <= 0.0:
-		return
-	prop.apply_central_impulse(-n * closing * FIXED_TO_MPS * prop.mass * 1.6)
-	vel += n * closing * 0.1
 
 
 # FUN_0002a824 vibrates the pad outside the front end. The wreck state reaches 2

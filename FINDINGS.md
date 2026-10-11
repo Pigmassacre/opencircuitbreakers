@@ -51,6 +51,14 @@ Record 8 is drawn through `FUN_00024218` with the car index as its shade argumen
 
 `FUN_00024bc4` arms the countdown (`DAT_000a647c = 0x14`) for every start, battles included. `FUN_0003a330` holds every car for the whole countdown unless one human races outside a time trial.
 
+## Collision blocks
+
+Each cell of the track grid is a 512-unit cube that names a piece and two mirror bits. A piece's collision block is a vertex pointer, sixteen face lists for a 4 by 4 grid of 128-unit buckets (triangles up to `0xff`, then quads up to `0xff`), and the face pointers. A vertex is 20 bytes starting `[-y, height, -x]`, with height running down from the middle of the cell. A face is its vertex indices, then the x tilt at `+4`, the y tilt at `+6`, the heading of its level normal at `+8`, the normal `[y, height, x]` at `+0xc`, and the surface in the high byte of the word at `-2`.
+
+`FUN_0003f31c` is the floor under the car's ground point: the first face of the point's cell that holds the point from above and lies above the car by less than `0x20` and below it by at most `_DAT_1f8001b0` (`0x12`, 4 while rising, 1 on the loose surface). `car.gd` `probe_ground` casts that as a ray.
+
+The wall tests are `FUN_00040128` (down x), `FUN_00040f7c` (up x), `FUN_00041db8` (down y) and `FUN_00042cf0` (up y). `FUN_0003a330` calls one after each step along that axis. Each takes four of the six points of `FUN_0003a000`, looks up the cell the point is in, and asks of each face there whether the point lies within it seen along the axis, and has passed it by no more than the step plus a unit. Because the cell comes from the point, a face only counts for points in its own layer, and a point level with the top of a layer is in the layer above. That is why the lip of a jump ramp that ends at the top of its cell does not stop a car driving up to it: the points sit `0x20` above the ground, exactly level with the lip. When no face is found and the point is within 16 units of a bucket edge behind it, the next bucket, or the next cell along the axis, is tried too.
+
 ## Front end
 
 `_DAT_000a6b24` is the front-end flag: 1 at boot and while the 3D car select runs, cleared by `FUN_00028d18` when a track is picked. It is not a battle flag. Everything gated on it (the doubled bump kick, the wreck vibration, the surface-2 wreck, the engine's `+10` and the engine scale's `-50`) is front-end behavior the port has no use for.
@@ -68,6 +76,14 @@ Record 8 is drawn through `FUN_00024218` with the car index as its shade argumen
 `FUN_00062944` runs only in the front end. It raises the respawn tone through `FUN_0002ac8c` when a player locks in a car, and the loose-surface tone (`_DAT_000a6e38`) from the select cars' dust.
 
 The tournament milestone celebration is not ported. When car 0 finishes having won every race of the world (`_DAT_000a6b1c`) and `FUN_0005c1e8`'s completion percentage (`_DAT_000a6b70`, top-three points over the maximum) is exactly 50 or 100, `_DAT_000a6fd8` takes that value. `FUN_00037b44` then eases the camera into a flyby and `FUN_0002aec4` drops type `0x4e` particles a few nodes behind car 0. `FUN_00072160` plays program 1 tone `0xf` at a random note instead of the respawn tone, and `FUN_00029b54` ends the sequence. The port keeps best places but has no completion percentage.
+
+The port keeps positions as floats and casts the wall tests as rays over the exported triangles, so it does not repeat the bucket lookups, and a face in the next cell along x or y counts wherever the ray meets it. Only the layer of a face is kept.
+
+`FUN_0003f31c` accepts any face that is not vertical. The port splits `collision.bin` into floor and wall bodies at a lean of `0x281` and only lands on the floor body.
+
+`FUN_00043c1c` turns the speed about the heading of the wall's level normal. The port's `bounce_off_wall` mirrors it in the whole normal, which is the same for an upright wall.
+
+`FUN_00044a88` returns `0x100` less the highest face over a point of a cell. Its one caller is early in `FUN_0003a330`; what that is for is not worked out.
 
 ## Function index
 
@@ -113,9 +129,13 @@ The tournament milestone celebration is not ported. When car 0 finishes having w
 | `FUN_00038418` | `track.gd` `search_gate` | Gate search |
 | `FUN_000388c4` | `track.gd` `lane_height`, `battle.gd` `grid_slot` | Lane placement, respawn clear, battle grid |
 | `FUN_000398c4` | `battle.gd` `set_back` | Expert battle respawn, two nodes back |
-| `FUN_0003a330` | `car.gd` `game_frame`, `listener_distance`, `frame_rumble`, `check_start_boost`, `start_boost`, `race.gd` `refresh_staged` | Car update, bump shove, pickup collection, start hold, start boost |
+| `FUN_00039a6c` | `car.gd` `walls_ignored` | Car update set-up; AI cars near the middle of a wide gate skip the wall tests |
+| `FUN_0003a000` | `car.gd` `WALL_POINTS` | The six body points the wall tests use |
+| `FUN_0003a330` | `car.gd` `game_frame`, `step_motion`, `leading_point`, `listener_distance`, `frame_rumble`, `check_start_boost`, `start_boost`, `race.gd` `refresh_staged` | Car update, stepped motion, bump shove, pickup collection, start hold, start boost |
 | `FUN_0003ea8c` | `car.gd` `land` | Landing, pattern 4 |
+| `FUN_0003f31c` | `car.gd` `probe_ground`, `ground_contact` | Floor under the ground point |
 | `FUN_0003fbb8` | `car.gd` `spin_out` | Spin; pattern 8 on car 1's pad |
+| `FUN_00040128`, `FUN_00040f7c`, `FUN_00041db8`, `FUN_00042cf0` | `car.gd` `wall_hit`, `is_wall` | Wall test after a step down x, up x, down y, up y |
 | `FUN_00043c1c` | `car.gd` `bounce_off_wall`, `wall_rumble` | Wall hit |
 | `FUN_00055084` | `items.gd` `spawn_table`, `car.gd` `bump_pass` | Place the pickup, then bump every car pair |
 | `FUN_00056348` | `car.gd` `bump_pair` | Car-car bump |
